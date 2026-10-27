@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T00:00:00Z",
+  "title": "Design System: MISRA Zig",
+  "extensions": {
+    "colorMeta": {
+      "bar-red": { "role": "primary", "displayName": "Manufacturer Red", "canonical": "#c41e1e", "tonalRamp": ["oklch(18% 0.07 27)", "oklch(28% 0.11 27)", "oklch(38% 0.15 27)", "oklch(52% 0.19 27)", "oklch(62% 0.18 27)", "oklch(72% 0.13 27)", "oklch(84% 0.07 27)", "oklch(95% 0.02 27)"] },
+      "red": { "role": "primary", "displayName": "Manufacturer Red (line weight)", "canonical": "#c41e1e" },
+      "red-text": { "role": "primary", "displayName": "Signal Red Text", "canonical": "#b71c1c" },
+      "dark-red": { "role": "primary", "displayName": "Reverse Red", "canonical": "#e8463f" },
+      "on-bar": { "role": "neutral", "displayName": "On Bar", "canonical": "#ffffff" },
+      "sheet": { "role": "neutral", "displayName": "Sheet White", "canonical": "#ffffff" },
+      "ink": { "role": "neutral", "displayName": "Datasheet Ink", "canonical": "#121316", "tonalRamp": ["oklch(15% 0.005 270)", "oklch(22% 0.005 270)", "oklch(30% 0.005 270)", "oklch(42% 0.008 270)", "oklch(55% 0.008 270)", "oklch(70% 0.006 270)", "oklch(84% 0.004 270)", "oklch(95% 0.002 270)"] },
+      "ink-2": { "role": "neutral", "displayName": "Second Ink", "canonical": "#474a52" },
+      "hair": { "role": "neutral", "displayName": "Hairline", "canonical": "#c8cad0" },
+      "head": { "role": "neutral", "displayName": "Table Head Grey", "canonical": "#eaebed" },
+      "code": { "role": "neutral", "displayName": "Source Paper", "canonical": "#f5f5f6" },
+      "row": { "role": "neutral", "displayName": "Lit Row", "canonical": "#fbeceb" },
+      "sel": { "role": "neutral", "displayName": "Selection", "canonical": "#ffd8d2" },
+      "ok": { "role": "tertiary", "displayName": "Pass Green", "canonical": "#0d6a39", "tonalRamp": ["oklch(18% 0.05 155)", "oklch(28% 0.08 155)", "oklch(36% 0.1 155)", "oklch(46% 0.12 155)", "oklch(60% 0.14 155)", "oklch(72% 0.14 155)", "oklch(84% 0.09 155)", "oklch(95% 0.03 155)"] },
+      "warn": { "role": "tertiary", "displayName": "Review Amber", "canonical": "#8a5800", "tonalRamp": ["oklch(20% 0.05 70)", "oklch(30% 0.08 70)", "oklch(40% 0.1 70)", "oklch(48% 0.11 70)", "oklch(62% 0.13 70)", "oklch(74% 0.14 70)", "oklch(85% 0.1 70)", "oklch(95% 0.04 70)"] },
+      "syntax-keyword": { "role": "syntax", "displayName": "Keyword Blue", "canonical": "#2445b8" },
+      "syntax-string": { "role": "syntax", "displayName": "String Plum", "canonical": "#8c2c58" },
+      "syntax-comment": { "role": "syntax", "displayName": "Comment Grey", "canonical": "#686c76" },
+      "syntax-number": { "role": "syntax", "displayName": "Number Ochre", "canonical": "#8a5200" },
+      "syntax-builtin": { "role": "syntax", "displayName": "Builtin Teal", "canonical": "#0a6a6a" },
+      "dark-sheet": { "role": "neutral", "displayName": "Reverse Sheet", "canonical": "#131416" },
+      "dark-ink": { "role": "neutral", "displayName": "Reverse Ink", "canonical": "#ecebe7" },
+      "dark-ink-2": { "role": "neutral", "displayName": "Reverse Second Ink", "canonical": "#aeb0b6" },
+      "dark-hair": { "role": "neutral", "displayName": "Reverse Hairline", "canonical": "#3b3d43" },
+      "dark-head": { "role": "neutral", "displayName": "Reverse Table Head", "canonical": "#202226" },
+      "dark-code": { "role": "neutral", "displayName": "Reverse Source Paper", "canonical": "#1a1b1e" },
+      "dark-row": { "role": "neutral", "displayName": "Reverse Lit Row", "canonical": "#2c1b1a" },
+      "dark-sel": { "role": "neutral", "displayName": "Reverse Selection", "canonical": "#6a1a14" },
+      "dark-ok": { "role": "tertiary", "displayName": "Reverse Pass Green", "canonical": "#5fd28f" },
+      "dark-warn": { "role": "tertiary", "displayName": "Reverse Review Amber", "canonical": "#f2b84e" },
+      "dark-syntax-keyword": { "role": "syntax", "displayName": "Reverse Keyword", "canonical": "#93a8ff" },
+      "dark-syntax-string": { "role": "syntax", "displayName": "Reverse String", "canonical": "#f39cc3" },
+      "dark-syntax-comment": { "role": "syntax", "displayName": "Reverse Comment", "canonical": "#8d9099" },
+      "dark-syntax-number": { "role": "syntax", "displayName": "Reverse Number", "canonical": "#e9b36b" },
+      "dark-syntax-builtin": { "role": "syntax", "displayName": "Reverse Builtin", "canonical": "#6fd5cf" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Part Number", "purpose": "MZ-0.17, Rule n, Pin n, EVM 0.17 at the head of each sheet; also the package name and footer part number at smaller sizes." },
+      "title": { "displayName": "Part Title", "purpose": "The h1 beside the part number, max 40ch." },
+      "headline": { "displayName": "Section Head", "purpose": "Numbered section heads and pager rule names." },
+      "subhead": { "displayName": "Subhead", "purpose": "h3 within a section; primary button label at 1rem." },
+      "maker": { "displayName": "Maker", "purpose": "MISRA ZIG in the running bar only, uppercase." },
+      "lede": { "displayName": "Lede", "purpose": "A rule's Description paragraph." },
+      "body": { "displayName": "Body", "purpose": "Prose at a 68ch measure; 1rem under 48rem." },
+      "table": { "displayName": "Table Cell", "purpose": "Table cells; 0.875rem in Characteristics and under 48rem." },
+      "label": { "displayName": "Table Head", "purpose": "Uppercase condensed table head cells." },
+      "caption": { "displayName": "Caption", "purpose": "Figure captions with a bold condensed Figure n-m. label." },
+      "source": { "displayName": "Source", "purpose": "Hack for figures, the editor, compiler output, check ids, kbd." }
+    },
+    "shadows": [
+      { "name": "hit-list-drop", "value": "0 0.75rem 2rem rgb(0 0 0 / 0.22)", "purpose": "Search results list only, with a 2px ink border. The one surface that floats over the sheet." }
+    ],
+    "motion": [
+      { "name": "pin-light", "value": "160ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Pin leg fill and stroke when a pin is hovered, focused, or lit." },
+      { "name": "bracket-light", "value": "160ms ease-out", "purpose": "Group bracket stroke and label fill when its group lights." },
+      { "name": "reduced-motion", "value": "transition: none; animation: none", "purpose": "Applied to everything under prefers-reduced-motion: reduce." }
+    ],
+    "breakpoints": [
+      { "name": "stack-aside", "value": "64rem", "purpose": "max-width: Characteristics aside and pin map drop below the main column, unsticky, max 30rem." },
+      { "name": "narrow", "value": "48rem", "purpose": "max-width: bar unsticks and wraps, search full width, single column, pin map scrolls at 28rem, check tables restack." }
+    ],
+    "rules": [
+      { "name": "Heavy rule", "value": "3px solid ink", "purpose": "Under the part head, above the pager, above the footer." },
+      { "name": "Table and figure rule", "value": "2px solid ink", "purpose": "Top and bottom of tables, top of source figures and the editor." },
+      { "name": "Ink rule", "value": "1px solid ink", "purpose": "Under section heads, table heads, group rows, and the docline." },
+      { "name": "Hairline", "value": "1px solid hair", "purpose": "Between rows, around source figures, the editor gutter." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Running Bar",
+      "kind": "nav",
+      "refersTo": "running-bar",
+      "description": "Sticky red bar with the maker mark, two sheet links, search, and the theme switch.",
+      "html": "<header class=\"ds-bar\"><a class=\"ds-maker\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"14\" height=\"18\"/><path d=\"M2 7h3M2 12h3M2 17h3M19 7h3M19 12h3M19 17h3\"/></svg><span>MISRA Zig</span></a><nav class=\"ds-links\"><a href=\"#\" aria-current=\"page\">Contents</a><a href=\"#\">Evaluate a file</a></nav><input class=\"ds-search\" placeholder=\"Find a rule  /\"><button class=\"ds-theme\" type=\"button\">Auto</button></header>",
+      "css": ".ds-bar { display: flex; align-items: center; gap: 1.5rem; min-height: 3.25rem; padding: 0.4rem 1.5rem; background: var(--bar, #c41e1e); color: var(--on-bar, #fff); font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; } .ds-bar a { color: inherit; text-decoration: none; } .ds-bar :focus-visible { outline: 2px solid var(--on-bar, #fff); outline-offset: 2px; } .ds-maker { display: flex; align-items: center; gap: 0.55rem; font-stretch: 75%; font-weight: 800; font-size: 1.3rem; letter-spacing: 0.01em; text-transform: uppercase; } .ds-maker svg { width: 1.45rem; height: 1.45rem; fill: none; stroke: currentColor; stroke-width: 2; } .ds-links { display: flex; gap: 1.25rem; font-size: 0.9375rem; } .ds-links a { padding-block: 0.3rem; border-bottom: 2px solid transparent; } .ds-links a:hover, .ds-links a[aria-current='page'] { border-bottom-color: var(--on-bar, #fff); } .ds-search { margin-left: auto; width: 15rem; padding: 0.4rem 0.7rem; border: 1px solid rgb(255 255 255 / 0.55); border-radius: 0; background: rgb(0 0 0 / 0.16); color: var(--on-bar, #fff); font: inherit; font-size: 0.9375rem; } .ds-search::placeholder { color: rgb(255 255 255 / 0.85); } .ds-search:focus { background: var(--sheet, #fff); color: var(--ink, #121316); caret-color: var(--red, #c41e1e); outline: 2px solid var(--on-bar, #fff); outline-offset: 1px; } .ds-theme { min-width: 4.5rem; padding: 0.3rem 0.6rem; border: 1px solid rgb(255 255 255 / 0.55); border-radius: 0; background: transparent; color: var(--on-bar, #fff); font: inherit; font-size: 0.875rem; cursor: pointer; } .ds-theme:hover { background: rgb(0 0 0 / 0.16); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink block with condensed bold label; turns red on hover. Evaluate a file, Check with Zig.",
+      "html": "<button class=\"ds-act\" type=\"button\">Check with Zig and misra-lint</button>",
+      "css": ".ds-act { padding: 0.55rem 1.1rem; border: 2px solid var(--ink, #121316); border-radius: 0; background: var(--ink, #121316); color: var(--sheet, #fff); font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-stretch: 78%; font-size: 1rem; letter-spacing: 0.02em; cursor: pointer; } .ds-act:hover { background: var(--red, #c41e1e); border-color: var(--red, #c41e1e); color: #fff; } .ds-act:focus-visible { outline: 2px solid var(--red, #c41e1e); outline-offset: 2px; } .ds-act:disabled { background: var(--head, #eaebed); border-color: var(--hair, #c8cad0); color: var(--ink-2, #474a52); cursor: progress; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Underlined red-text action without a box: Edit and check, Restore, Copy, Close.",
+      "html": "<button class=\"ds-quiet\" type=\"button\">Edit and check</button>",
+      "css": ".ds-quiet { padding: 0.35rem 0; border: 0; background: none; color: var(--red-text, #b71c1c); font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; font-size: 0.9375rem; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; cursor: pointer; } .ds-quiet:hover { text-decoration-thickness: 2px; } .ds-quiet:focus-visible { outline: 2px solid var(--red, #c41e1e); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ruled Spec Table",
+      "kind": "card",
+      "refersTo": "table-head",
+      "description": "Captioned table with 2px ink top and bottom, grey uppercase condensed head, hairline rows, tabular right-aligned numbers, lit row.",
+      "html": "<table class=\"ds-spec\"><caption><b>Table 3-1.</b> Pin functions</caption><thead><tr><th class=\"ds-tnum\">Pin</th><th>Name</th><th>Function</th><th class=\"ds-tnum\">Checks</th></tr></thead><tbody><tr><td class=\"ds-tnum\">7</td><td><b>R10.5</b></td><td>A bool stays a bool.</td><td class=\"ds-tnum\">1</td></tr><tr class=\"ds-on\"><td class=\"ds-tnum\">8</td><td><b>R10.6</b></td><td>Widen the operands, then add.</td><td class=\"ds-tnum\">1</td></tr><tr><td class=\"ds-tnum\">9</td><td><b>R10.7</b></td><td>A composite expression is not the operand of a wider arithmetic operation.</td><td class=\"ds-tnum\">1</td></tr></tbody></table>",
+      "css": ".ds-spec { width: 100%; border-collapse: collapse; font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; font-size: 0.9375rem; line-height: 1.45; font-variant-numeric: tabular-nums; color: var(--ink, #121316); } .ds-spec caption { caption-side: top; text-align: left; padding: 0 0 0.5rem; font-stretch: 78%; font-weight: 700; } .ds-spec caption b { color: var(--red-text, #b71c1c); } .ds-spec th, .ds-spec td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--hair, #c8cad0); text-align: left; vertical-align: top; } .ds-spec thead th { border-top: 2px solid var(--ink, #121316); border-bottom: 1px solid var(--ink, #121316); background: var(--head, #eaebed); font-stretch: 78%; font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.03em; text-transform: uppercase; } .ds-spec tbody tr:last-child td { border-bottom: 2px solid var(--ink, #121316); } .ds-spec .ds-tnum { text-align: right; white-space: nowrap; } .ds-spec tr.ds-on td { background: var(--row, #fbeceb); } .ds-spec tr.ds-on b { color: var(--red-text, #b71c1c); } .ds-spec tbody tr:hover td { background: var(--row, #fbeceb); }"
+    },
+    {
+      "name": "Source Figure",
+      "kind": "card",
+      "refersTo": "source-figure",
+      "description": "Hack source on source paper with a 2px ink top rule, captioned Figure n-m, with a quiet edit action.",
+      "html": "<figure class=\"ds-fig\"><pre><span class=\"ds-kw\">fn</span> sumWide(a: <span class=\"ds-kw\">u16</span>, b: <span class=\"ds-kw\">u16</span>) <span class=\"ds-kw\">error</span>{Overflow}!<span class=\"ds-kw\">u32</span> {\n    <span class=\"ds-kw\">return</span> std.math.add(<span class=\"ds-kw\">u32</span>, a, b);\n}</pre><figcaption><b>Figure 2-1. Compliant source</b><button class=\"ds-edit\" type=\"button\">Edit and check</button></figcaption></figure>",
+      "css": ".ds-fig { margin: 0; font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; } .ds-fig pre { margin: 0; padding: 1rem 1.25rem; overflow-x: auto; background: var(--code, #f5f5f6); color: var(--ink, #121316); border: 1px solid var(--hair, #c8cad0); border-top: 2px solid var(--ink, #121316); font-family: Hack, ui-monospace, monospace; font-size: 0.875rem; line-height: 1.6rem; tab-size: 4; } .ds-kw { color: var(--kw, #2445b8); } .ds-fig figcaption { display: flex; align-items: baseline; gap: 1rem; margin-top: 0.6rem; font-size: 0.875rem; color: var(--ink-2, #474a52); } .ds-fig figcaption b { color: var(--ink, #121316); font-stretch: 78%; } .ds-edit { margin-left: auto; padding: 0; border: 0; background: none; color: var(--red-text, #b71c1c); font: inherit; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; } .ds-edit:hover { text-decoration-thickness: 2px; } .ds-edit:focus-visible { outline: 2px solid var(--red, #c41e1e); outline-offset: 2px; }"
+    },
+    {
+      "name": "Verdict Marks",
+      "kind": "chip",
+      "refersTo": "characteristics",
+      "description": "Shape-first verdicts: rejected, compiles, flagged, review, reader, compiler error, ok.",
+      "html": "<div class=\"ds-marks\"><span class=\"ds-mark\"><i class=\"ds-shape ds-rejected\"></i>Rejected by Zig 0.17</span><span class=\"ds-mark\"><i class=\"ds-shape ds-compiles\"></i>Compiles, and is still wrong</span><span class=\"ds-mark\"><i class=\"ds-shape ds-flagged\"></i>Flagged by misra-lint</span><span class=\"ds-mark\"><i class=\"ds-shape ds-review\"></i>review</span><span class=\"ds-mark\"><i class=\"ds-shape ds-reader\"></i>Left to a reader</span><span class=\"ds-mark\"><i class=\"ds-shape ds-error\"></i>compiler error</span><span class=\"ds-mark\"><i class=\"ds-shape ds-ok\"></i>No findings</span></div>",
+      "css": ".ds-marks { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: var(--ink, #121316); } .ds-mark { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9375rem; } .ds-shape { flex: none; display: inline-block; width: 0.7rem; height: 0.7rem; } .ds-rejected { background: var(--ink, #121316); } .ds-compiles { border: 2px solid var(--red, #c41e1e); } .ds-flagged { background: var(--red, #c41e1e); transform: rotate(45deg) scale(0.85); } .ds-review { border: 2px solid var(--warn, #8a5800); transform: rotate(45deg) scale(0.85); } .ds-reader { border: 2px solid var(--ink-2, #474a52); border-radius: 50%; } .ds-error { background: var(--ink, #121316); border-radius: 50%; } .ds-ok { width: 0.85rem; height: 0.85rem; background: var(--ok, #0d6a39); -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1.5 6.5 4.5 9.5 10.5 2.5' fill='none' stroke='black' stroke-width='2.2'/%3E%3C/svg%3E\") center / contain no-repeat; mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1.5 6.5 4.5 9.5 10.5 2.5' fill='none' stroke='black' stroke-width='2.2'/%3E%3C/svg%3E\") center / contain no-repeat; }"
+    },
+    {
+      "name": "Part Head",
+      "kind": "custom",
+      "refersTo": "display",
+      "description": "Condensed part number at display scale beside the title, over a 3px ink rule.",
+      "html": "<div class=\"ds-part\"><p class=\"ds-num\"><span>Rule</span> 10.6</p><div><h1>Widen the operands, then add.</h1><p class=\"ds-side\">Pin 8, R10.6. Types, portability, and arithmetic</p></div></div>",
+      "css": ".ds-part { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 0.5rem 2.5rem; padding-bottom: 1rem; border-bottom: 3px solid var(--ink, #121316); font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: var(--ink, #121316); } .ds-num { margin: 0; font-stretch: 70%; font-weight: 800; font-size: clamp(3.25rem, 9vw, 6rem); line-height: 0.88; letter-spacing: -0.02em; white-space: nowrap; } .ds-num span { color: var(--red-text, #b71c1c); } .ds-part h1 { margin: 0; max-width: 40ch; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.3; font-weight: 500; } .ds-side { margin: 0.35rem 0 0; color: var(--ink-2, #474a52); font-size: 0.9375rem; }"
+    },
+    {
+      "name": "Pin Map Excerpt",
+      "kind": "custom",
+      "refersTo": "characteristics",
+      "description": "Package drawing pins; hover lights the leg, name, and group bracket in red.",
+      "html": "<svg class=\"ds-pins\" viewBox=\"0 0 200 90\" role=\"group\" aria-label=\"Pin map excerpt\"><g class=\"ds-grp\"><path class=\"ds-bracket\" d=\"M 30 10 H 24 V 80 H 30\"/></g><rect class=\"ds-pkg\" x=\"110\" y=\"4\" width=\"80\" height=\"82\"/><a class=\"ds-pin\" href=\"#\"><rect class=\"ds-leg\" x=\"96\" y=\"17.5\" width=\"14\" height=\"5\"/><text class=\"ds-name\" x=\"92\" y=\"24\" text-anchor=\"end\">R10.5</text></a><a class=\"ds-pin ds-on\" href=\"#\"><rect class=\"ds-leg\" x=\"96\" y=\"42.5\" width=\"14\" height=\"5\"/><text class=\"ds-name\" x=\"92\" y=\"49\" text-anchor=\"end\">R10.6</text></a><a class=\"ds-pin\" href=\"#\"><rect class=\"ds-leg\" x=\"96\" y=\"67.5\" width=\"14\" height=\"5\"/><text class=\"ds-name\" x=\"92\" y=\"74\" text-anchor=\"end\">R10.7</text></a></svg>",
+      "css": ".ds-pins { width: 16rem; font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; } .ds-pkg { fill: var(--sheet, #fff); stroke: var(--ink, #121316); stroke-width: 2; } .ds-leg { fill: var(--ink-2, #474a52); transition: fill 160ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-name { fill: var(--ink, #121316); font-size: 11px; font-weight: 600; font-stretch: 78%; } .ds-bracket { fill: none; stroke: var(--hair, #c8cad0); stroke-width: 1.5; transition: stroke 160ms ease-out; } .ds-pin:hover .ds-leg, .ds-pin:focus-visible .ds-leg, .ds-on .ds-leg { fill: var(--red, #c41e1e); } .ds-pin:hover .ds-name, .ds-pin:focus-visible .ds-name, .ds-on .ds-name { fill: var(--red-text, #b71c1c); } .ds-pins:hover .ds-bracket { stroke: var(--red, #c41e1e); } .ds-pin:focus { outline: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Component Datasheet",
+    "overview": "The handbook is printed as a semiconductor datasheet family. The front sheet is part MZ-0.17: a red running bar, the part number at display scale, Features beside Description, then a package drawing whose pins are the rules beside a Pin Functions table. Every rule is its own sheet with a part number (\"Rule 10.6\", \"Dir 4.6\"), a numbered Description, Do, Don't, and Machine checks, and a Characteristics table that holds the counts. The system is white sheet, black ink, hairline and heavy black rules, light grey table heads, and one manufacturer red.\n\nDensity is that of a reference document: 17px Archivo prose at a 68ch measure, ruled tables with tabular figures, numbered sections (red numeral, condensed head, 1px ink underline), and figures and tables captioned \"Figure n-m.\" and \"Table n-m.\". Archivo carries everything that is read; its condensed widths carry everything that is a name or a number. Hack carries source. Dark is the same sheet printed in reverse: the bar keeps its red, ink and paper swap, text red lifts.\n\nThe page has no sidebar, no cards, no rounded corners, and no decorative imagery. The only drawings are the package (pin map), the maker mark, and the verdict shapes, all built from straight strokes in ink and red.",
+    "keyCharacteristics": [
+      "Part numbers in Archivo at 70% width, weight 800, up to 6rem.",
+      "One red: a solid field only on the running bar; elsewhere at line weight.",
+      "Ruled tables: 2px ink top and bottom, 1px ink under the grey head, 1px hairline between rows.",
+      "Verdicts drawn as shapes, so they read without color.",
+      "Square corners everywhere; circles only inside the verdict shapes and the pin-1 dot.",
+      "Light and dark from one token set, following the system with a manual Auto, Light, Dark switch."
+    ],
+    "rules": [
+      { "name": "The Running Bar Rule", "body": "The bar is the only large field of red. Everywhere else red is a stroke, a numeral, a link, a marker, or a shape at most 0.9rem tall.", "section": "colors" },
+      { "name": "The Same Bar Rule", "body": "Dark printing keeps the bar at bar-red with white text. Only the sheet reverses; the text and line red lifts to dark-red so it stays legible on dark-sheet.", "section": "colors" },
+      { "name": "The Condensed Nameplate Rule", "body": "Condensed width is for names and numbers only: 70% for part numbers, 75% for the maker, 78% for heads, labels, captions, and pin names. Prose and table cells stay at normal width.", "section": "typography" },
+      { "name": "The Numbered Caption Rule", "body": "Every figure and table carries a bold condensed label numbered by its section (\"Figure 2-1.\", \"Table 3-1.\"). Sections are numbered with a red-text numeral before the head.", "section": "typography" },
+      { "name": "The Ruled Depth Rule", "body": "Hierarchy between regions is the weight of the black rule (3px, 2px, 1px ink, 1px hairline), never a shadow or a tint panel.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** lead every sheet with a part number in the display style and number its sections with a red-text numeral.",
+      "**Do** caption every figure and table \"Figure n-m.\" or \"Table n-m.\" in bold condensed.",
+      "**Do** separate regions with ink rules of 3px, 2px, and 1px, and rows with the hairline.",
+      "**Do** draw each verdict with its shape so it reads in monochrome.",
+      "**Do** define new colors in both printings, light in `:root` and dark under `[data-theme=\"dark\"]` and the `prefers-color-scheme` block.",
+      "**Do** keep reduced motion: every transition and animation is cut under `prefers-reduced-motion: reduce`."
+    ],
+    "donts": [
+      "**Don't** fill any region with red other than the running bar, the favicon, and the small verdict shapes and flag.",
+      "**Don't** round corners. Circles are for the reader and error shapes and the pin-1 dot only.",
+      "**Don't** add a shadow beyond the search hit list.",
+      "**Don't** set prose or table cells in condensed widths.",
+      "**Don't** mark a verdict with color alone.",
+      "**Don't** add a docs sidebar; the pin map and pin table are the contents."
+    ]
+  }
+}

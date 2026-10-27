@@ -1,0 +1,12 @@
+{
+  // Static handbook only. The checker runs locally (scripts/server.ts), never here.
+  "name": "misra-zig",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./build/site"
+  },
+  "routes": [
+    { "pattern": "misra-zig.dev", "custom_domain": true },
+    { "pattern": "misra-zig.com", "custom_domain": true }
+  ]
+}

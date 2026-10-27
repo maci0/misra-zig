@@ -1,0 +1,11 @@
+.scratch/
+.zig-cache/
+zig-out/
+.playwright-mcp/
+build/
+.secrets
+.wrangler/
+.impeccable/*.local.json
+.impeccable/hook.cache.json
+.impeccable/questions/
+.impeccable/review/

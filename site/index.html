@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#c41e1e">
+  <meta name="description" content="MISRA Zig: a coding standard for Zig 0.17, inspired by MISRA C. Each rule with its obligation, a do, a don't, and the machine checks that decide it.">
+  <title>MISRA Zig</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/Archivo.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/site.css">
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <a class="skip" href="#sheet">Skip to content</a>
+  <header class="bar">
+    <a class="maker" href="#reading" aria-label="MISRA Zig, front sheet">
+      <svg class="maker-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18"/><path d="M2 7h3M2 12h3M2 17h3M19 7h3M19 12h3M19 17h3"/></svg>
+      <span>MISRA Zig</span>
+    </a>
+    <nav class="bar-links" aria-label="Sheets">
+      <a href="#reading" data-nav="reading">Contents</a>
+      <a href="#playground" data-nav="playground">Evaluate a file</a>
+    </nav>
+    <form class="search" role="search">
+      <label class="visually-hidden" for="q">Find a rule</label>
+      <input id="q" name="q" type="text" role="combobox" aria-autocomplete="list" placeholder="Find a rule  /" autocomplete="off" spellcheck="false" aria-controls="hits" aria-expanded="false">
+      <div id="hits" class="hits" hidden></div>
+    </form>
+    <button type="button" class="theme" id="theme" aria-label="Color theme: follows the system">Auto</button>
+  </header>
+  <p class="docline"><span id="docnum">MZ-0.17</span><span>Not a publication of the MISRA Consortium</span></p>
+  <main id="sheet" tabindex="-1">
+    <p class="loading">Loading the handbook.</p>
+  </main>
+  <footer class="foot">
+    <div><p class="foot-num">MZ-0.17</p><p class="foot-page" id="footpage"></p></div>
+    <p>Check compiles the edited source with <code>zig test --test-no-exec -lc -ODebug</code> and runs misra-lint on it, on this machine. The server listens on 127.0.0.1. Zig accepting a file is not compliance, and neither is a clean misra-lint run.</p>
+    <p class="foot-links"><a href="/rules.json">rules.json</a><a href="/checks.json">checks.json</a></p>
+    <p class="keys"><kbd>/</kbd> find <kbd>[</kbd> <kbd>]</kbd> previous and next rule <kbd>Ctrl</kbd>+<kbd>Enter</kbd> check</p>
+  </footer>
+  <script src="/site.js" type="module"></script>
+</body>
+</html>
