@@ -141,3 +141,10 @@ Append only. A reversal is a new entry.
 
 - What: the project became a git repository on `main`. `.gitignore` also keeps out `.impeccable/` review captures, its `*.local.json` config, and its caches; AGENTS.md says so. The 2026-10-21 review entries no longer name the review tools; their facts are unchanged.
 - Why: the user asked to commit and push.
+
+## 2026-10-27: HTTPS redirect, public repo
+
+- What: `scripts/worker.ts` (tested in `scripts/worker.test.ts`) runs before the static assets (`main`, `assets.binding`, and `assets.run_worker_first` in `wrangler.jsonc`) and answers plain HTTP with a 301 to the same URL on HTTPS. AGENTS.md describes it. The GitHub repository `maci0/misra-zig` is public.
+- Why: the user asked to enable "Always Use HTTPS" and to make the repo public. The zone setting needs a scope the wrangler OAuth login does not offer (`wrangler login --scopes-list` lists only `zone:read` for zones), so the Worker makes the same redirect. Cost: every request now invokes the Worker and counts against the Workers request quota; static assets alone are free (Cloudflare, "Billing and limitations" for static assets).
+- Evidence: the worker test failed before `worker.ts` existed. After `wrangler deploy` (version fd71ce2d; the previous version was 68c793a1), `curl` on both domains: `http://` for `/` and `/rules.json?a=1` returned 301 to the same path and query on `https://`; over HTTPS, `/`, `/api/health` returned 200, `/rules.json` held 59 rules, `POST /api/check` and an unknown path returned 404, and the HTML, CSS, JS, JSON, and font content types were unchanged. `gh repo view` reports the repo `PUBLIC`.
+- Verified: `bun test scripts/` (31 tests); `wrangler deploy --dry-run` showed the `ASSETS` binding.

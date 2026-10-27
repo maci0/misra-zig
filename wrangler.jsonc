@@ -2,8 +2,12 @@
   // Static handbook only. The checker runs locally (scripts/server.ts), never here.
   "name": "misra-zig",
   "compatibility_date": "2026-10-01",
+  // Redirects plain HTTP to HTTPS, then serves the assets.
+  "main": "scripts/worker.ts",
   "assets": {
-    "directory": "./build/site"
+    "directory": "./build/site",
+    "binding": "ASSETS",
+    "run_worker_first": true
   },
   "routes": [
     { "pattern": "misra-zig.dev", "custom_domain": true },
