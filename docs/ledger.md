@@ -148,3 +148,10 @@ Append only. A reversal is a new entry.
 - Why: the user asked to enable "Always Use HTTPS" and to make the repo public. The zone setting needs a scope the wrangler OAuth login does not offer (`wrangler login --scopes-list` lists only `zone:read` for zones), so the Worker makes the same redirect. Cost: every request now invokes the Worker and counts against the Workers request quota; static assets alone are free (Cloudflare, "Billing and limitations" for static assets).
 - Evidence: the worker test failed before `worker.ts` existed. After `wrangler deploy` (version fd71ce2d; the previous version was 68c793a1), `curl` on both domains: `http://` for `/` and `/rules.json?a=1` returned 301 to the same path and query on `https://`; over HTTPS, `/`, `/api/health` returned 200, `/rules.json` held 59 rules, `POST /api/check` and an unknown path returned 404, and the HTML, CSS, JS, JSON, and font content types were unchanged. `gh repo view` reports the repo `PUBLIC`.
 - Verified: `bun test scripts/` (31 tests); `wrangler deploy --dry-run` showed the `ASSETS` binding.
+
+## 2026-11-04: release v0.1.0
+
+- What: release v0.1.0. Hardened subprocess spawning with timeouts, error handling in server and scripts, expanded test suite coverage (byte bounds, empty source rejection, API health and traversal checks), isolated build cache directories for misra-lint, and added threat model and security policy.
+- Why: cut the initial release of the standard, linter, datasheet site, and tooling.
+- Verified: `zig fmt --check .`, `zig test -ODebug tools/misra_lint.zig` (27 tests), `zig test -OReleaseSafe tools/misra_lint.zig` (27 tests), `zig test -lc -ODebug docs/examples/compliant.zig -target x86_64-linux-musl` (10 tests), `zig test -lc -OReleaseSafe docs/examples/compliant.zig -target x86_64-linux-musl` (10 tests), and `bun test scripts/` (27 tests across handbook, worker, server, and lint test suites).
+
