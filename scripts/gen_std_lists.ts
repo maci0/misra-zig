@@ -16,7 +16,13 @@ const DECL = /^pub (?:inline )?(?:const|fn|var) ([A-Za-z_][A-Za-z0-9_]*)/;
 const ERRNO_UNREACHABLE = /^\s+\.[A-Z][A-Z0-9_]*(?:\s*,\s*\.[A-Z][A-Z0-9_]*)*\s*,?\s*=>\s*unreachable/;
 
 async function zigEnv(): Promise<{ stdDir: string; version: string }> {
-    const proc = Bun.spawn({ cmd: [zigCommand(), "env"], stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn({
+        cmd: [zigCommand(), "env"],
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 10_000,
+        killSignal: "SIGKILL",
+    });
     const text = await new Response(proc.stdout).text();
     if ((await proc.exited) !== 0) throw new Error("zig env failed");
     const stdDir = /\.std_dir = "([^"]+)"/.exec(text)?.[1];
@@ -100,7 +106,13 @@ if (import.meta.main) {
     const text = await renderStdLists();
     const path = join(root, OUTPUT);
     if (Bun.argv.includes("--check")) {
-        const current = await Bun.file(path).text().catch(() => "");
+        let current = "";
+        try {
+            current = await Bun.file(path).text();
+        } catch (err) {
+            console.error(`${OUTPUT} unreadable: ${err instanceof Error ? err.message : String(err)}`);
+            process.exit(2);
+        }
         if (current !== text) {
             console.error(`${OUTPUT} is stale; run bun scripts/gen_std_lists.ts`);
             process.exit(1);

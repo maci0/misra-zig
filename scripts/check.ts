@@ -252,14 +252,21 @@ export function zigCommand(): string {
 
 /** `zig version`, or "" when the compiler cannot be started. */
 export async function zigVersion(bin: string): Promise<string> {
+    let proc;
     try {
-        const proc = Bun.spawn({ cmd: [bin, "version"], stdout: "pipe", stderr: "ignore" });
-        const out = await new Response(proc.stdout).text();
-        return (await proc.exited) === 0 ? out.trim() : "";
+        proc = Bun.spawn({
+            cmd: [bin, "version"],
+            stdout: "pipe",
+            stderr: "ignore",
+            timeout: 10_000,
+            killSignal: "SIGKILL",
+        });
     } catch {
         // Bun.spawn throws when the binary is missing; the caller shows "not on PATH".
         return "";
     }
+    const out = await new Response(proc.stdout).text();
+    return (await proc.exited) === 0 ? out.trim() : "";
 }
 
 function present(output: string, file: string): string {

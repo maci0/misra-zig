@@ -416,22 +416,28 @@ ${sec("5", "Evaluation", `<div class="prose"><p>Paste a whole Zig file to compil
     wirePinMap();
 }
 
-function lintEvidence(code) {
-    if (!state.health.lint) return Promise.resolve(null);
-    if (!state.lintCache.has(code)) {
-        state.lintCache.set(
-            code,
-            fetch("/api/lint", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ source: code }),
-            })
-                .then((res) => (res.ok ? res.json() : { findings: null }))
-                .then((body) => body.findings)
-                .catch(() => null),
-        );
+async function lintEvidence(code) {
+    if (!state.health.lint) return null;
+    const cached = state.lintCache.get(code);
+    if (cached !== undefined) return cached;
+    let result = null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    try {
+        const res = await fetch("/api/lint", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ source: code }),
+            signal: controller.signal,
+        });
+        if (res.ok) result = (await res.json()).findings;
+    } catch {
+        result = null;
+    } finally {
+        clearTimeout(timer);
     }
-    return state.lintCache.get(code);
+    state.lintCache.set(code, result);
+    return result;
 }
 
 function figure(code, caption, key) {
@@ -655,18 +661,25 @@ function mountBench(host, options) {
         status.className = "status";
         status.textContent = "Checking with Zig.";
         results.innerHTML = "";
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 70_000);
         try {
             const response = await fetch("/api/check", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({ source: area.value }),
+                signal: controller.signal,
             });
             const body = await response.json();
             showResult(body);
-        } catch {
+        } catch (err) {
             status.className = "status bad";
-            status.textContent = "The checker is not running. From the repo, run bun scripts/server.ts.";
+            status.textContent =
+                err && err.name === "AbortError"
+                    ? "The check did not finish in 70 seconds."
+                    : "The checker is not running. From the repo, run bun scripts/server.ts.";
         } finally {
+            clearTimeout(timer);
             button.disabled = false;
         }
     };
@@ -939,12 +952,17 @@ window.addEventListener("hashchange", show);
 
 try {
     const [book, agent, checks, health] = await Promise.all(
-        ["/handbook.json", "/rules.json", "/checks.json", "/api/health"].map((url) =>
-            fetch(url).then((res) => {
+        ["/handbook.json", "/rules.json", "/checks.json", "/api/health"].map(async (url) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 15_000);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
                 if (!res.ok) throw new Error(url);
-                return res.json();
-            }),
-        ),
+                return await res.json();
+            } finally {
+                clearTimeout(timer);
+            }
+        }),
     );
     state.book = book;
     state.agent = agent;
