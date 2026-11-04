@@ -65,6 +65,7 @@ const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
 const allowedOrigins = new Set([...allowedHosts].map((host) => `http://${host}`));
 
 function refusal(req: Request): Response | null {
+    // No authentication: the listen address is loopback-only, so the check is Host/Origin/content-type only.
     if (!allowedHosts.has(req.headers.get("host") ?? "")) return new Response("Unknown host.", { status: 421 });
     if (req.method !== "POST") return null;
     const origin = req.headers.get("origin");
@@ -151,11 +152,30 @@ Bun.serve({
         if (refused) return refused;
         const url = new URL(req.url);
         if (url.pathname === "/api/health") {
-            const revised = statSync(handbookPath).mtime.toISOString().slice(0, 10);
+            let revised = "";
+            try {
+                revised = statSync(handbookPath).mtime.toISOString().slice(0, 10);
+            } catch (err) {
+                console.error(err instanceof Error ? err.message : err);
+            }
             return Response.json({ zig: version, lint: lintBin !== null, lintProblem, revised, compileLimit });
         }
-        if (url.pathname === "/handbook.json") return json(JSON.stringify(handbook()));
-        if (url.pathname === "/rules.json") return json(`${JSON.stringify(agentRules(handbook()), null, 2)}\n`);
+        if (url.pathname === "/handbook.json") {
+            try {
+                return json(JSON.stringify(handbook()));
+            } catch (err) {
+                console.error(err instanceof Error ? err.message : err);
+                return new Response("Handbook unavailable.", { status: 500 });
+            }
+        }
+        if (url.pathname === "/rules.json") {
+            try {
+                return json(`${JSON.stringify(agentRules(handbook()), null, 2)}\n`);
+            } catch (err) {
+                console.error(err instanceof Error ? err.message : err);
+                return new Response("Rules unavailable.", { status: 500 });
+            }
+        }
         if (url.pathname === "/checks.json") return json(`${JSON.stringify(checks, null, 2)}\n`);
         if (url.pathname === "/api/check") {
             const source = await sourceOf(req);
@@ -173,7 +193,18 @@ Bun.serve({
         if (!file || !existsSync(file) || !statSync(file).isFile()) {
             return new Response("Not found.", { status: 404 });
         }
-        return new Response(Bun.file(file), { headers: { "content-type": contentType(file), ...fresh } });
+        let body: unknown;
+        try {
+            body = Bun.file(file);
+            // Bun.file is lazy; reading catches a file deleted after the stat above.
+            await (body as { text(): Promise<string> }).text().then((text) => {
+                body = new Response(text, { headers: { "content-type": contentType(file), ...fresh } });
+            });
+        } catch (err) {
+            console.error(err instanceof Error ? err.message : err);
+            return new Response("Not found.", { status: 404 });
+        }
+        return body as Response;
     },
 });
 
