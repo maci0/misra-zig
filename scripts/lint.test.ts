@@ -1,7 +1,7 @@
 import { beforeAll, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkSource, compileLimitFromEnv, projectRoot } from "./check.ts";
+import { checkSource, compileLimitFromEnv, MAX_SOURCE_BYTES, projectRoot, sourceBytes } from "./check.ts";
 import { parseHandbook } from "./handbook.ts";
 import { buildLint, lintChecks, lintSample } from "./lint.ts";
 
@@ -141,7 +141,9 @@ test("Check analyzes methods at any container depth, and not a generic's returne
 }, 300_000);
 
 test("a compile over the memory limit is stopped and reported", async () => {
-    const big = "comptime {\n    var a: [512 * 1024 * 1024]u8 = undefined;\n    a[7] = 1;\n    if (a[7] != 1) @compileError(\"x\");\n}\n";
+    // A 512 MiB array under a 1 GiB cap does not trip it (Zig holds it sparsely and
+    // finishes, timing out at 60s instead); a large enough comptime array is stopped.
+    const big = "comptime {\n    var a: [1536 * 1024 * 1024]u8 = undefined;\n    a[7] = 1;\n    if (a[7] != 1) @compileError(\"x\");\n}\n";
     const result = await checkSource(root, big, compileLimitFromEnv("1G"));
     expect(result.status).toBe("failed");
     expect(result.output).toContain("compile memory limit");
@@ -171,6 +173,28 @@ test("--root reports a file the root does not reach through @import", async () =
         "src/orphan.zig:1:1: violation[unreachable_file] Rule 2.1: The root does not reach this file through @import, so the compiler never analyzes it. (src/main.zig)",
     ]);
 });
+
+test("sourceBytes counts UTF-8 bytes, not UTF-16 units, and sizes the source cap", async () => {
+    expect(sourceBytes("a")).toBe(1);
+    expect(sourceBytes("é")).toBe(2);
+    expect(sourceBytes("😀")).toBe(4);
+    expect(sourceBytes("😀".repeat(2))).toBe(8);
+    // A multi-byte string past the byte cap must be refused by checkSource's own guard,
+    // before it reaches the compiler (a string.length check would let it through).
+    const over = "😀".repeat(Math.ceil(MAX_SOURCE_BYTES / 4) + 1);
+    expect(sourceBytes(over)).toBeGreaterThan(MAX_SOURCE_BYTES);
+    const result = await checkSource(root, over);
+    expect(result.status).toBe("failed");
+    expect(result.output).toContain("64 KiB");
+}, 120_000);
+
+test("an empty sample is refused before it reaches the compiler", async () => {
+    for (const source of ["", "   \n"]) {
+        const result = await checkSource(root, source);
+        expect(result.status).toBe("failed");
+        expect(result.output).toContain("empty");
+    }
+}, 120_000);
 
 test("tools/std_lists.zig matches the installed standard library", async () => {
     const proc = Bun.spawn({ cmd: ["bun", join(root, "scripts", "gen_std_lists.ts"), "--check"], cwd: root, stdout: "pipe", stderr: "pipe" });

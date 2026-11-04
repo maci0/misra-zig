@@ -38,7 +38,53 @@ function post(path: string, headers: Record<string, string>, body = sample): Pro
 test("the site's own JSON request is checked", async () => {
     const res = await post("/api/lint", { "content-type": "application/json", origin: base });
     expect(res.status).toBe(200);
-    expect(Array.isArray((await res.json()).findings)).toBe(true);
+    const body = await res.json();
+    expect(Array.isArray(body.findings)).toBe(true);
+    // The sample is a clean function, so the lint result must be exactly empty:
+    // a non-array (null when misra-lint did not run) or a stray finding fails here.
+    expect(body.findings).toEqual([]);
+}, 120_000);
+
+test("/api/check accepts a valid sample and rejects an invalid one", async () => {
+    const good = await post("/api/check", { "content-type": "application/json", origin: base });
+    expect(good.status).toBe(200);
+    const goodBody = await good.json();
+    expect(goodBody.status).toBe("accepted");
+    expect(goodBody.errors).toEqual([]);
+    expect(goodBody.findings).toEqual([]);
+
+    const bad = await post("/api/check", { "content-type": "application/json", origin: base }, JSON.stringify({ source: "export fn f(n: u32) u32 {\n    if (n) return 1;\n    return 0;\n}\n" }));
+    expect(bad.status).toBe(200);
+    const badBody = await bad.json();
+    expect(badBody.status).toBe("rejected");
+    expect(badBody.errors.map((item: { line: number }) => item.line)).toEqual([2]);
+}, 300_000);
+
+test("a malformed request body is refused with a structured failure", async () => {
+    const notJson = await post("/api/lint", { "content-type": "application/json", origin: base }, "not json");
+    expect(notJson.status).toBe(400);
+    const notJsonBody = await notJson.json();
+    expect(notJsonBody.status).toBe("failed");
+
+    const noSource = await post("/api/lint", { "content-type": "application/json", origin: base }, JSON.stringify({}));
+    expect(noSource.status).toBe(400);
+    const noSourceBody = await noSource.json();
+    expect(noSourceBody.status).toBe("failed");
+    // The two sides must give different reasons, not one generic failure.
+    expect(noSourceBody.output).not.toBe(notJsonBody.output);
+}, 120_000);
+
+test("path traversal and static file serving", async () => {
+    const traversal = await fetch(`${base}/../scripts/server.ts`);
+    expect(traversal.status).toBe(404);
+    const root = await fetch(`${base}/`);
+    expect(root.status).toBe(200);
+    expect(root.headers.get("content-type")).toContain("text/html");
+    const health = await fetch(`${base}/api/health`);
+    expect(health.status).toBe(200);
+    const healthBody = await health.json();
+    expect(healthBody.lint).toBe(true);
+    expect(healthBody.zig).toBeTruthy();
 }, 120_000);
 
 test("a request from another origin is refused before any compile", async () => {
