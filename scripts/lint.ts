@@ -33,8 +33,22 @@ export async function buildLint(root: string): Promise<string> {
     const bin = join(root, ".scratch", "bin", "misra-lint");
     const staged = `${bin}.${Bun.randomUUIDv7()}.tmp`;
     mkdirSync(join(root, ".scratch", "bin"), { recursive: true });
+    const cache = join(root, ".scratch", "cache");
+    const globalCache = join(root, ".scratch", "global-cache");
+    mkdirSync(cache, { recursive: true });
+    mkdirSync(globalCache, { recursive: true });
     const proc = Bun.spawn({
-        cmd: [zigCommand(), "build-exe", "-ODebug", "tools/misra_lint.zig", `-femit-bin=${staged}`],
+        cmd: [
+            zigCommand(),
+            "build-exe",
+            "-ODebug",
+            "tools/misra_lint.zig",
+            "--cache-dir",
+            cache,
+            "--global-cache-dir",
+            globalCache,
+            `-femit-bin=${staged}`,
+        ],
         cwd: root,
         stdout: "pipe",
         stderr: "pipe",
