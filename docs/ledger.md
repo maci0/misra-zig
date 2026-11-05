@@ -155,3 +155,11 @@ Append only. A reversal is a new entry.
 - Why: cut the initial release of the standard, linter, datasheet site, and tooling.
 - Verified: `zig fmt --check .`, `zig test -ODebug tools/misra_lint.zig` (27 tests), `zig test -OReleaseSafe tools/misra_lint.zig` (27 tests), `zig test -lc -ODebug docs/examples/compliant.zig -target x86_64-linux-musl` (10 tests), `zig test -lc -OReleaseSafe docs/examples/compliant.zig -target x86_64-linux-musl` (10 tests), and `bun test scripts/` (27 tests across handbook, worker, server, and lint test suites).
 
+## 2026-11-05: release v0.2.0
+
+- What: cut v0.2.0 from the consolidated `main`, including the subprocess and server hardening, test coverage, and isolated linter build caches awaiting publication. No runtime changes since the local v0.1.0 tag. Fetching all remotes confirmed that only `main` remains; the review branches were already merged, with one worktree, no stashes, and no open pull requests.
+- Why: the user requested consolidation, a minor release, publication, production deployment, and removal of old scratch files and build caches.
+- Cleanup: removed `.scratch/` (about 7.4 GiB), `.zig-cache/`, `build/`, `.wrangler/`, browser captures, and design review captures and hook cache. Preserved credentials, local configuration, design question records, and tracked design files.
+- Verified: `zig fmt --check .`; `compliant.zig` (10 tests) and `misra_lint.zig` (27 tests) in both Debug and ReleaseSafe; `bun test scripts/` (36 tests); `bun scripts/check_samples.ts` (all samples match); vnu HTML and CSS validation; site build; Wrangler deployment dry run.
+- Published: Worker version `3624842f-e6a7-4054-b85b-468a8071b7cb`, tagged v0.2.0, on misra-zig.dev and misra-zig.com. Both domains served HTML, scripts, rules, checks, handbook, and health matching the build; HTTP requests preserved paths and queries in 301 redirects to HTTPS; `POST /api/check` returned 404.
+
