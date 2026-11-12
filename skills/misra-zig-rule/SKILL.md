@@ -5,8 +5,9 @@ description: Add, change, or remove a rule in the MISRA Zig handbook and keep ev
 
 # Change a MISRA Zig rule
 
-The markdown handbook is the one source of wording. Everything else derives
-from it or is tested against it. Work from the repo root.
+The markdown handbook supplies the per-rule wording used by the site and
+review checklist. `AGENTS.md` and the reference examples are maintained
+separately and must agree with it. Work from the repo root.
 
 ## Files and what each owns
 
@@ -42,7 +43,8 @@ written only after a run shows the panic.
 - A do sample must compile inside `wrapSource` (`scripts/check.ts`). The
   wrapper adds `std`, `Header`, `Color`, `Opcode`, `sumWide`, `Node`,
   `readSome`, and `captureErrno` when the sample names them without declaring
-  them. Any other helper is declared in the sample.
+  them; it also supplies `right` when `&right` appears without a declaration.
+  Any other helper is declared in the sample.
 - Copy every do function into `compliant.zig`, with a test of the success path
   and of each error.
 
@@ -61,23 +63,16 @@ written only after a run shows the panic.
 5. A new `**Compiles**` don't must be flagged under its own rule. Add a check
    with the `misra-lint-check` skill, or add the sample to `UNDECIDED` with what
    a syntax tree cannot see.
-6. Run the gate:
+6. Run the full [canonical checks in AGENTS.md](../../AGENTS.md#checks),
+   including HTML and CSS validation with `vnu`. `check_samples.ts` compiles
+   every sample and compares the result with its mark.
 
-```bash
-zig fmt --check .
-zig test -lc -ODebug docs/examples/compliant.zig
-zig test -lc -OReleaseSafe docs/examples/compliant.zig
-zig test -ODebug tools/misra_lint.zig
-zig test -OReleaseSafe tools/misra_lint.zig
-bun test scripts/
-bun scripts/check_samples.ts
-```
-
-`check_samples.ts` compiles every sample and compares the result with its mark.
-
-7. Measure the counts and update `README.md` and `docs/misra-lint.md`: rules
-   from `bun test`, checks from `misra-lint --checks`, coverage from
-   `bun test scripts/lint.test.ts`. Never write a count from memory.
-8. Open `bun scripts/server.ts`, load the rule's sheet, and check the marks,
-   the evidence line on each don't, and the characteristics.
+7. Verify rule counts with `bun test scripts/handbook.test.ts`, check counts
+   with `misra-lint --checks`, and sample coverage with
+   `bun test scripts/lint.test.ts`. Update the coverage
+   in `docs/misra-lint.md` and any affected status claims in `README.md`. Never
+   write a count from memory.
+8. Run `bun scripts/server.ts` and open `http://127.0.0.1:4173`. On the rule's
+   sheet, check the marks, the evidence line on each don't, and the
+   characteristics.
 9. Append an entry to `docs/ledger.md`.

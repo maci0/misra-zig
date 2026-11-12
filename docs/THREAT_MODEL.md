@@ -1,187 +1,122 @@
 # Threat model
 
-Last reviewed: 2026-11-04 (starter version; no owner or review cadence is
-recorded here because none is established). Companion: `SECURITY.md`.
+Last reviewed: 2026-11-13. No owner and no review cadence are set.
+Companion: `SECURITY.md`.
 
-This is a coding standard plus a static handbook site and a local checker
-server. It holds no user accounts, no personal data, and no database. The
-attack surface is the local checker server, the published static site, and
-the deploy path. Everything below names the file that implements it.
+This is a coding standard, a static handbook, and a local checker. It has
+no accounts, no personal data, and no database. The network listeners are
+`scripts/server.ts` (localhost) and `scripts/worker.ts` (published static
+site).
 
-## Risk-ranked summary
+## What can go wrong
 
-| # | Risk | Why it matters | Where |
-|---|------|----------------|-------|
-| R1 | Local checker server has no authentication; it trusts localhost. | Any process or DNS-rebinding page that reaches it can queue compiler runs and read compiler output. | `scripts/server.ts` |
-| R2 | Untrusted Zig source is compiled on the same host. It is never executed, but the compiler still reads files it names. | A sample naming a local file via `@import` / `@embedFile` makes the compiler read outside its scratch directory. | `scripts/check.ts` (`checkSource`) |
-| R3 | Compile queue and caches are unbounded. | Repeated checks fill `.scratch/` and queue memory on the developer's machine; the start-up warm-up compile is uncapped. | `scripts/server.ts` (`oneAtATime`), `scripts/check.ts` (`projectScratch`) |
-| R4 | Published worker counts every request against a quota, with no rate limit. | Unauthenticated traffic can exhaust the Workers request quota and take the public site down. | `scripts/worker.ts` |
-| R5 | Build and compiler diagnostics can carry local paths. | `/api/health` returns the misra-lint build failure text; compiler output is the only other channel to the page. | `scripts/server.ts` (`lintProblem`, `/api/health`), `scripts/check.ts` (`present`, `clip`) |
+| # | Risk | Bound |
+|---|------|-------|
+| R1 | Anyone who can open a TCP connection to the listen port can POST a compile. The server has no authentication. | Bound to `127.0.0.1`. A request whose `Host` is not `127.0.0.1:PORT` or `localhost:PORT` gets 421 before any compile, including a DNS-rebinding `Host`. |
+| R2 | `zig test --test-no-exec` analyzes the sample as the user who started the server. It does not execute the sample's tests. There is no OS sandbox: the scratch directory is a working directory and a cache, not a confinement boundary. | Zig rejects imports and embedded files outside the module path in the probes below. This is a compiler restriction, not OS isolation. |
+| R3 | Compile requests are queued with no depth limit (`oneAtATime`) and share persistent caches under `.scratch/site-check/` with no size cap. Each temporary source directory is removed after compilation. | One compile at a time. Body 256 KiB, source 64 KiB of UTF-8. |
+| R4 | The published Worker runs before static assets (`run_worker_first: true`), so every request counts against the Workers request quota. There is no rate limit in this repo. | A full quota stops the public handbook. The Worker does not compile. |
+| R5 | `/api/health` returns `lintProblem`, the misra-lint build failure text, which the page displays in its feature list and when a Check has no lint findings available. Compiler output is rewritten toward `sample.zig` and then clipped, and a failed `Bun.spawn` returns `err.message` to the client. | A 500 from the fetch handler is a fixed sentence. The build failure and the spawn error are not. |
+| R6 | `build/site/` is whatever `scripts/build_site.ts` wrote. The Worker serves those bytes. | A bad build is what readers copy, and what `rules.json` and `checks.json` tell tools. |
 
-Emerging risk (recorded, not fixed here): a new check, endpoint, or deploy
-setting changes this surface. Re-verify against the file references when
-`scripts/server.ts`, `scripts/check.ts`, `scripts/worker.ts`, or
-`wrangler.jsonc` changes. sec-review owns point fixes; this document owns
-the map.
+When `scripts/server.ts`, `scripts/check.ts`, `scripts/lint.ts`,
+`scripts/worker.ts`, or `wrangler.jsonc` changes, re-check the rows above
+against those files.
 
-## 1. Attack surface inventory
+## Listeners and inputs
 
-**Local checker server** (`scripts/server.ts`, `Bun.serve` on `127.0.0.1`,
-default port 4173, `PORT` overrides, validated 1–65535):
+**Local server.** `Bun.serve` in `scripts/server.ts`, hostname `127.0.0.1`,
+port `PORT` or 4173. `PORT` must be an integer from 1 to 65535 or the
+process throws before it listens.
 
-- `GET /` and static files under `site/` (path traversal-checked in
-  `siteFile`).
-- `GET /handbook.json`, `/rules.json`, `/checks.json`, `/api/health`.
-- `POST /api/check` — compiles untrusted Zig source with
-  `zig test --test-no-exec -lc -ODebug` (`scripts/check.ts` `checkSource`)
-  and lints it with misra-lint (`scripts/lint.ts` `lintSample`).
-- `POST /api/lint` — lints only.
+- `GET /` and files under `site/`. `siteFile` decodes the path, rejects a
+  NUL, and requires the normalized path to stay under `site/`.
+- `GET /handbook.json`, `/rules.json`, `/checks.json`.
+- `GET /api/health`: `{ zig, lint, lintProblem, revised, compileLimit }`.
+- `POST /api/check`: `zig test --test-no-exec -lc -ODebug` (`checkSource`)
+  and misra-lint (`lintSample`).
+- `POST /api/lint`: misra-lint only.
 
-**Published site** (`wrangler.jsonc`, `scripts/worker.ts`): static assets from
-`build/site/` plus `scripts/build_site.ts`. No `/api/check` exists there
-(`build_site.ts` writes only `api/health`). The worker redirects plain HTTP
-to HTTPS and passes everything else to `ASSETS`.
+Every request checks `Host` against `127.0.0.1:PORT` and `localhost:PORT`
+and returns 421 on a mismatch. A POST then checks `Origin`, only when the
+header is present (403 unless it is `http://127.0.0.1:PORT` or
+`http://localhost:PORT`), followed by `Content-Type` starting with
+`application/json` (415). A POST with no
+`Origin` is not refused by the origin check. The body cap is
+`maxRequestBodySize` 256 KiB (413). The source cap is `MAX_SOURCE_BYTES`
+(64 KiB of UTF-8).
 
-**CLI entry points** (developer-run, not network): `tools/misra_lint.zig`
-(`zig run ... -- FILE...`, `--json`, `--checks`, stdin `-`),
-`scripts/check_samples.ts`, `scripts/review.ts`, `scripts/gen_std_lists.ts`,
-`scripts/build_site.ts`. They read files named on the command line and the
-handbook on disk.
+**Published site.** `wrangler.jsonc` serves `build/site/` through
+`scripts/worker.ts` on misra-zig.dev and misra-zig.com. `build_site.ts`
+writes `api/health` and no `api/check`. The Worker redirects `http:` to
+`https:` with 301 and passes every other request to the asset binding.
+Static assets answer an unknown path with their own 404.
 
-**Environment variables**: `PORT`, `ZIG` (compiler path, `scripts/check.ts`
-`zigCommand`), `MISRA_ZIG_COMPILE_LIMIT` (validated in
-`compileLimitFromEnv`, minimum 512 MiB). None beyond these is read.
+**CLI, not a listener.** `tools/misra_lint.zig`, `scripts/check_samples.ts`,
+`scripts/review.ts`, `scripts/gen_std_lists.ts`, and `scripts/build_site.ts`
+read paths the developer passed and files in the repo.
 
-**Deployment surface**: `wrangler.jsonc` (custom domains misra-zig.dev and
-misra-zig.com, HTTPS redirect, `run_worker_first: true`). The only secret
-named anywhere is `CLOUDFLARE_ACCOUNT_ID` in gitignored `.secrets` (mode
-600); wrangler signs in with an OAuth login outside the repo. There is no
-admin port, debug endpoint, or extra service.
+**Environment.** `PORT` (`scripts/server.ts`), `ZIG` (`zigCommand` in
+`scripts/check.ts`), `MISRA_ZIG_COMPILE_LIMIT` (`compileLimitFromEnv`:
+bytes, or a number with `M` or `G`; below 512 MiB throws; default
+4 GiB). `ZIG` is the compiler binary path and is not otherwise checked.
 
-No entry point in the model is stale; no network listener exists besides
-the two above.
+**Deploy.** `wrangler.jsonc` names the two domains and
+`run_worker_first: true`. `CLOUDFLARE_ACCOUNT_ID` is in gitignored
+`.secrets` (mode 600). Wrangler uses the OAuth login outside the repo.
+No code under `site/` or `scripts/` reads the account id. There is no
+admin port.
 
-## 2. Trust boundaries and data flow
+## Controls on a local check
 
-- **Browser → local server.** Untrusted: the `source` string in
-  `POST /api/check` / `/api/lint`. The page itself is served from `site/`.
-- **Local server → Zig compiler.** Crossed in `scripts/check.ts`
-  (`checkSource`). The source is written to a fresh scratch directory and
-  compiled with fixed flags and `--test-no-exec`, so it is analyzed, not
-  run. The compiler is the privilege step: it runs with the developer's
-  account and a 4 GiB address-space cap (`prlimit`) and a 60 s timeout.
-- **Local server → misra-lint.** Crossed in `scripts/lint.ts`
-  (`lintSample`); the binary is built once at start-up into
-  `.scratch/bin` with an atomic rename.
-- **Developer → published site.** Crossed by `wrangler deploy` with the
-  OAuth login; the Worker serves static assets only.
-- **Secrets → code.** `CLOUDFLARE_ACCOUNT_ID` enters only through the
-  deploy command's env file; nothing in `site/`, `scripts/`, or the Worker
-  reads it.
+Zig 0.17.0 probes rejected `@embedFile("/etc/hostname")` and a parent-directory
+`@embedFile` with "embed of file outside package path". An absolute
+`@import("/etc/hostname")` reported "no module named"; an import leaving the
+module directory reported "import of file outside module path". Sibling-file
+imports and embeds were accepted. These probes did not cover `@cInclude`,
+build-system module roots, or other compiler file access. The compiler runs
+with the user's account, reads the Zig installation, and writes `.scratch/`.
 
-No database, no tenant boundary, no service-to-service call exists.
+`checkSource` writes the wrapped sample to a fresh directory under
+`.scratch/site-check/run-*` and deletes that directory in `finally`. The
+cache directories next to it stay.
 
-## 3. Assets and impact
+Each submitted compile is started under `prlimit --as=`
+at `compileLimit` (default 4 GiB). The server refuses to start when
+`prlimit` is not on `PATH`. The warm-up calls `checkSource` with no memory
+limit so the first libc build can finish; that call still uses the 60 s
+timeout (`ZIG_TIMEOUT_MS`). A killed compile is reported as
+"Zig did not finish within 60 seconds." An over-cap compile is reported as
+stopped under the memory limit.
 
-Worth stealing or corrupting: the developer's local files and account
-(reachable only through the compiler in R2), the Cloudflare account behind
-the deploy token, and availability of the public handbook. The handbook
-itself is public content; there is no user data, credential store, or
-signing key in the code. A corrupted handbook build is a reputational risk
-only (wrong rule text served from `build/site/`).
+`readCapped` keeps 12,000 bytes of stdout and 12,000 of stderr. `clip`
+then keeps `OUTPUT_LIMIT` (12,000) UTF-16 code units of the joined text,
+after stripping ANSI and trimming. That is a string-length cap, not a
+12 KiB byte cap. `present` replaces the sample path with `sample.zig`.
 
-## 4. Threats per boundary (STRIDE)
+misra-lint is built once at start into `.scratch/bin`, written to a temp
+name and `rename`d into place (`buildLint`). A lint run times out at 10 s.
+A build failure is stored in `lintProblem`, returned by `/api/health`, and
+displayed in the front-sheet feature list and Check results when lint is
+unavailable (`site/site.js`). Check still runs the compiler when the lint binary is missing; `findings`
+is then null.
 
-**Browser → local server** (`scripts/server.ts` `refusal`):
+`site/site.js` posts JSON and inserts compiler output through `escapeHtml`.
+The body size, source size, `Host`, and content type are also enforced in
+`scripts/server.ts`.
 
-- Spoofing / CSRF from another site: mitigated by the `Origin` check (403)
-  and the `application/json` content-type check (415), which forces a
-  preflight this server never answers.
-- Spoofing via DNS rebinding: mitigated by the exact `Host` check (421)
-  against `127.0.0.1:PORT` / `localhost:PORT`.
-- Denial of service: partially mitigated — 256 KiB request body cap,
-  64 KiB source cap, one compile at a time. No limit on queued requests or
-  total cache growth (R3).
-- Elevation of privilege: none in the server; impact comes from R2.
+## Published site and deploy
 
-**Local server → compiler** (`scripts/check.ts`):
+The Worker does not branch on the path. Quota exhaustion is the
+availability failure (R4). Content is the last `build_site.ts` output (R6).
 
-- Tampering / information disclosure: the compiler reads files the sample
-  names (`@import`, `@embedFile`). Results are clipped (12 KiB) and file
-  paths in output are rewritten to `sample.zig`, but compile errors embed
-  sampled text and could name local paths. No sandbox beyond the scratch
-  directory, `--test-no-exec`, and the memory cap (R2).
-- Denial of service: 60 s timeout, memory cap, serialized queue. The
-  start-up warm-up compile in `scripts/server.ts` is uncapped by design
-  (it builds libc into the cache).
+A leaked account id does not deploy: the OAuth login is a separate secret,
+stored outside the repo. This file does not claim what an attacker can do
+with the OAuth credential.
 
-**Published worker** (`scripts/worker.ts`):
+## Reporting
 
-- Denial of service by quota exhaustion: every request is counted because
-  `run_worker_first` is true; no rate limit or cache rule exists (R4).
-- Tampering of served content: the assets are whatever `build_site.ts`
-  wrote; a poisoned build serves it as-is.
-
-**Deploy** (`wrangler.jsonc`, `.secrets`): a leaked account ID alone does
-not deploy (OAuth login is required); nothing else is stored.
-
-## 5. Mitigations mapping
-
-| Threat | Control in code | File |
-|--------|-----------------|------|
-| DNS rebinding | Exact Host allowlist, 421 | `scripts/server.ts` (`refusal`) |
-| Cross-origin POST | Origin allowlist (403) + JSON content type (415) | `scripts/server.ts` (`refusal`) |
-| Oversized input | 256 KiB body, 64 KiB source, 12 KiB output clip | `scripts/server.ts`, `scripts/check.ts` (`MAX_SOURCE_BYTES`, `clip`) |
-| Compiler runaway | 60 s timeout, `prlimit` memory cap, serialized queue | `scripts/check.ts` (`checkSource`) |
-| Path traversal on static files | `decodeURIComponent`, `\0` reject, normalized prefix check | `scripts/server.ts` (`siteFile`) |
-| Stack / path leak to page | Generic 500 body; detail to server log only | `scripts/server.ts` (`error`) |
-| HTTP downgrade on public site | 301 to HTTPS in the Worker | `scripts/worker.ts` |
-| Partial build execution | Atomic rename of `misra-lint` binary | `scripts/lint.ts` (`buildLint`) |
-
-Threats with no mitigation, ranked: R4 (quota, public, unauthenticated) >
-R3 (local disk/queue growth) > R2 residual (compiler file reads) > R5
-(diagnostic path text in `/api/health`). The Host check is a single point of
-failure for R1: it is the only thing between a rebinding page and the
-compiler, and it depends on the server staying bound to `127.0.0.1`.
-
-Claims check: no document claims a mitigation the code lacks. `README.md`
-says the published copy is read-only and Check runs only locally, which
-matches `build_site.ts` (no `/api/check` in the build). `AGENTS.md` says the
-published copy never runs a compiler and `POST /api/check` is a 404 there;
-the build writes no such route, and the Worker passes unknown paths to the
-assets, which 404.
-
-## 6. Abuse cases
-
-There is no authenticated or multi-user surface, so business-logic abuse is
-limited to local use:
-
-- A hostile page cannot reach the server while the Host check holds; if a
-  developer binds the server to `0.0.0.0` or the check is removed, that
-  page could submit compiler jobs from any site the developer visits.
-- A local user can exhaust disk by repeated checks: the compiler cache in
-  `.scratch/site-check/` grows without a cap (`scripts/check.ts`
-  `projectScratch`), and queued compiles are not bounded.
-- A hostile sample can make the compiler spend the full 60 s / 4 GiB; that is
-  the designed cap, and the queue serializes it, so it delays only the
-  developer's own checks.
-
-No client-side enforcement is trusted: `site/site.js` sends the source as
-JSON and renders compiler output escaped (`escapeHtml`); limits are also
-enforced server-side.
-
-## 7. Document quality
-
-This file is the starter model; it replaces the previous state of no model.
-It has a risk rank and a last-reviewed date above; no owner or cadence is
-recorded because none exists (noted, not invented). `SECURITY.md` carries
-the supported versions and what to report; its disclosure contact is a gap
-(see `SECURITY.md`).
-
-## 8. Response readiness
-
-Events worth investigating exist only as process output: `console.error`
-in `scripts/server.ts` (server log), and compiler/lint output returned to
-the page. There is no request log, no audit trail of who submitted a check,
-and no documented path from a vulnerability report to a shipped fix.
-o11y-review owns log structure; this notes the gap only.
+`console.error` in `scripts/server.ts` is the server log. Check and lint
+output are returned to the caller. There is no request log and no record
+of who submitted a check. `SECURITY.md` states that no disclosure contact
+is published.

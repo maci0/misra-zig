@@ -5,7 +5,8 @@ description: Review Zig 0.17 code against the MISRA Zig coding standard. Use whe
 
 # Review Zig against MISRA Zig
 
-`$MZ` below is the MISRA Zig repo: this skill sits at `$MZ/skills/misra-zig-review/`.
+Set `MZ` to the absolute path of the MISRA Zig repo, which contains this skill
+at `skills/misra-zig-review/`. Run commands from the project you are reviewing.
 The standard is `$MZ/AGENTS.md`; every rule's do and don't is in
 `$MZ/docs/misra-zig-handbook.md`. Needs Zig 0.17.0 and Bun.
 
@@ -15,28 +16,41 @@ what it could not see.
 ## 1. Skeleton
 
 ```bash
-bun $MZ/scripts/review.ts <files>      # exit 0 clean, 1 findings, 2 error
+bun "$MZ/scripts/review.ts" path/to/file.zig  # exit 0 no findings, 1 findings, 2 error
 ```
 
 It prints markdown: misra-lint findings grouped by rule, then a reader
 checklist of every rule in two lists, rules no check decides and rules a check
 decides only in part. The checklist comes from the handbook and the check list,
-so it is never stale. Start the report from it.
+so it reflects those files at the time of the run. Start the report from it.
+This command runs misra-lint; it does not compile the reviewed files or check
+import reachability. Exit 0 still requires the gates and reader pass below.
 
 ## 2. Compiler gates
 
 Run these in the project under review and keep each exit code:
 
 ```bash
-zig fmt --check <files>
-zig run -ODebug $MZ/tools/misra_lint.zig -- --root <test root> <every .zig file>
-zig test -ODebug <test root>
-zig test -OReleaseSafe <test root>
+zig fmt --check path/to/file.zig
+zig run -ODebug "$MZ/tools/misra_lint.zig" -- test_root.zig src/*.zig
 ```
 
+Resolve every `parse_error` before continuing: the `--root` import pass
+reparses files without the per-file nesting guard. Then run:
+
+```bash
+zig run -ODebug "$MZ/tools/misra_lint.zig" -- --root test_root.zig test_root.zig src/*.zig
+zig test -ODebug test_root.zig
+zig test -OReleaseSafe test_root.zig
+```
+
+Replace the example paths with the project's files. Include the root and all
+intermediate imports in the file list; `src/*.zig` does not include subdirectories.
 Add `-lc` when the code calls libc. A test that passes only in Debug is a
 finding. The `--root` run reports every file the test root never imports
-(Rule 2.1): the compiler has not checked those at all, so read them first. ReleaseFast is not the compliance build.
+(Rule 2.1). Read those files first. Even an imported file can contain
+unreferenced declarations the compiler has not analyzed. ReleaseFast is not the
+compliance build.
 
 ## 3. Findings
 

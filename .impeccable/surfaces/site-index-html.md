@@ -5,18 +5,35 @@ primary_target: "site/index.html"
 related_targets: ["site/site.css","site/site.js"]
 ---
 
-Scope: site/index.html and its CSS and JavaScript. Mode: Read. Replacement visual world, code-led, replacing the university press frame (seed 114c8b8c). Handbook data, /rules.json, the compiler check, and misra-lint findings stay authoritative. Reader's job: learn the rules; checking code supports it. Wrong: a generic docs site, decoration that slows reading. Light and dark follow the OS with a manual switch.
+# Handbook design direction
+
+Scope: `site/index.html`, `site/site.css`, and `site/site.js`. The reader looks
+up rules and compares samples; editing and checking support that task. The
+handbook and generated JSON own the rule content. [DESIGN.md](../../DESIGN.md)
+owns the shipped tokens, typography, layout, and component details.
 
 ## Direction contract
 
-THESIS: The handbook is a datasheet family: each rule is a part with a part number, a description, typical application, and characteristics, refusing the docs-sidebar template.
+- The handbook is a component datasheet family. Each rule has a part number,
+  description, sample figures, evidence, and characteristics.
+- The front sheet has features, a description, a package drawing, and a pin
+  function table. Pins follow the 59 directives and rules in group order, then
+  the compiler note; an odd pin count leaves the last package pin NC.
+- The pin map and table are the contents. Hovering or focusing a pin lights its
+  table row and group bracket. Keep this navigation instead of a docs sidebar.
+- Use a white sheet, black ink, ruled tables, and one manufacturer red. Red
+  fills the running bar; elsewhere it marks lines, links, and small symbols.
+- Set names and numbers in condensed Archivo, prose in normal-width Archivo,
+  and source in Hack. Every figure and table has a numbered caption.
+- Verdict shapes must distinguish outcomes without color. Use square corners;
+  circles belong only to verdict marks and the pin-1 dot.
+- Light and dark follow the OS. The bar offers Auto, Light, and Dark and stores
+  the choice. The running bar keeps its red in both themes. Respect reduced motion.
 
-OWN-WORLD: White sheet, black ink, one manufacturer red on the running bar, rules, and part numbers; light grey table headers; hairline black ruled tables with MIN/TYP/MAX discipline; figures captioned "Figure n". Archivo condensed bold for part numbers and section heads, Archivo for prose, Hack for source. Dark is the same sheet printed in reverse.
+## Decision record
 
-STORY: Read what the standard covers, find a rule in the pin map or pin function table, read its description, compare the typical application with the don't, see which checks decide it, edit and check.
-
-FIRST VIEWPORT: Red running bar with doc number, revision, and search; part number MZ-0.17 at display scale with the title; Features list beside the Description; below it a package drawing whose 39 pins are the rules, grouped by side as the six groups, beside the Pin Functions table. Signature: hovering a pin lights its row and its group side; the pin map is the contents.
-
-FORM: Component datasheet, candidate 1 of 7 (Impeccable's pick), seed key e7045df5. Raises: verdicts drawn by shape (jackfield), resume flag on the last sheet (cutting bench), evidence level per don't (provenance), fixed regions (PC-98), whole-sheet dark printing (cyclorama).
-
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+The datasheet direction (seed `e7045df5`, candidate 1 of 7) replaced the earlier
+university-press direction (seed `114c8b8c`). The finish review and subsequent
+corrections are recorded in [the ledger](../../docs/ledger.md). Review captures
+are disposable local files; the design contract and shipped source remain
+tracked.

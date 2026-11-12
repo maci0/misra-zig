@@ -5,8 +5,9 @@ description: Write new Zig 0.17 code that follows the MISRA Zig standard from th
 
 # Write Zig under MISRA Zig
 
-`$MZ` is the MISRA Zig repo: this skill sits at `$MZ/skills/misra-zig-write/`.
-The rule text is `$MZ/AGENTS.md`. Every form below is a do sample from
+Set `MZ` to the absolute path of the MISRA Zig repo, which contains this skill
+at `skills/misra-zig-write/`. Run commands from the project you are writing.
+The rule text is `$MZ/AGENTS.md`. The forms below summarize the do samples in
 `$MZ/docs/misra-zig-handbook.md`, tested in `$MZ/docs/examples/compliant.zig`.
 
 The test for every line: is it defined in ReleaseFast, where the safety checks
@@ -36,18 +37,18 @@ are gone? A panic in Debug is not a pass.
 | An OS call | `std.posix.system.call(...)` and `switch (std.posix.errno(rc))` with an error per errno | a `std.posix` wrapper listed in `posix_assumes_errno` | Dir 4.1 |
 | Get an `std.Io` | take `io: std.Io` as a parameter; only `main` builds one | `std.Io.Threaded.init` in a helper | Dir 4.12 |
 | Worker threads | a fixed array spawned once at start-up, joined on every path | `spawn` per request, in a `while`, or `detach` | Dir 5.3 |
-| Data two threads touch | `std.atomic.Value` or `std.Io.Mutex` | a plain `var` | Dir 5.1 |
+| Data two threads touch | `std.atomic.Value` or `std.Io.Mutex` for shared writes | unsynchronized shared writes | Dir 5.1 |
 | Atomic load, store, or read-modify-write | `.seq_cst` | `.acquire`, `.release`, `.monotonic` | Rule 21.25 |
 | Hold two mutexes | one documented order, the same in every function | `a` then `b` here, `b` then `a` elsewhere; locking a mutex you hold | Dir 5.2 |
 | Reinterpret bits | `@bitCast` | `@ptrCast` between value pointers | Rule 11.3 |
 | Call C | the header translated in `build.zig` | a handwritten `extern fn` | Rule 8.4 |
 | Build options | `b.standardOptimizeOption(.{})`, `sanitize_c` left on | `.optimize = .ReleaseFast` | Dir 4.1 |
 | A new source file | import it from the test root | a file nothing imports | Rule 2.1 |
-| Widen a sum | `std.math.add(u32, a16, b16)` | `@as(u32, a16 + b16)` | Rule 10.6 to 10.8 |
+| Widen a sum | `std.math.add(u32, a16, b16)` | `@as(u32, a16 + b16)` | Rules 10.6 to 10.8 |
 | Validate input | `if (bad) return error.X;` | `std.debug.assert(...)`, `unreachable` | Dir 4.1 |
 | One of several values | `union(enum)` and a `switch` | bare `union` | Rule 19.2 |
 | Read a tagged union's payload | `switch (v) { .float => \|x\| ... }` | `v.float` | Rule 19.3 |
-| Many-item pointer from C | `const items = p[0..len];`, check `len`, index `items` | `p + n`, `q - p` | Rule 18.4 |
+| Many-item pointer from C | validate the pointer and `len` first, then `const items = p[0..len];` and index `items` | `p + n`, `q - p` | Rule 18.4 |
 | Write through a parameter | take `[]T` or `*T` | `@constCast` on a `[]const T`; `noalias` | Rule 11.8, Rule 8.14 |
 | Several values of one type | a slice parameter | a `...` parameter with `@cVaArg` | Rule 17.1 |
 | Move bytes inside one buffer | `@memmove(buf[0..rest], buf[n..])` | `@memcpy` between two slices of one buffer | Rule 19.1 |
@@ -66,15 +67,22 @@ are gone? A panic in Debug is not a pass.
 | Field of a C header struct | `u32`, `u64` in `extern struct`, layout asserted | `usize` | Dir 4.6 |
 | Parameter only read | `[]const T`, `*const T` | `[]T` | Rule 8.13 |
 | Handle an error | `try`, or `catch \|err\| switch (err) { ... }` | `catch {}`, `catch unreachable` | Dir 4.1 |
-| Read errno | clear before the libc call, read right after `== -1` | clear after, or print first | Rule 22.8 to 22.10 |
+| Read errno | clear before the libc call, read right after `== -1` | clear after, or print first | Rules 22.8 to 22.10 |
 
 ## Workflow
 
 1. Write the code in the forms above. When a task is not in the table, find
    its rule in `$MZ/AGENTS.md` and copy the handbook's do.
-2. Run `zig run -ODebug $MZ/tools/misra_lint.zig -- --root <test root> <files>`
-   and fix every finding. An allow comment needs a true reason.
-3. Run `zig fmt --check`, and `zig test` at `-ODebug` and `-OReleaseSafe`. Tests
+2. Run `zig run -ODebug "$MZ/tools/misra_lint.zig" -- test_root.zig src/*.zig`
+   and resolve every `parse_error` first. The `--root` import pass reparses
+   without the nesting guard. Once parsing is clean, run
+   `zig run -ODebug "$MZ/tools/misra_lint.zig" -- --root test_root.zig test_root.zig src/*.zig`.
+   Replace the example paths with every project `.zig` file, including the
+   root and intermediate imports. Globs are not recursive. Resolve every
+   finding; a `review` item needs a reader decision, and an allow comment
+   needs a true reason.
+3. Run `zig fmt --check` with the file paths, then `zig test test_root.zig` at
+   `-ODebug` and `-OReleaseSafe` (add `-lc` when the code calls libc). Tests
    that allocate use `std.testing.allocator`; cover the error path, not only
    success.
 4. For anything that crosses a trust boundary, run the `misra-zig-review` skill

@@ -6,9 +6,10 @@ description: Add or change a deterministic check in misra-lint (tools/misra_lint
 # Add a misra-lint check
 
 `tools/misra_lint.zig` parses one file with `std.zig.Ast` and has no types and
-no data flow. A check belongs there only when the syntax tree alone decides it.
-When it does not, the don't stays in `UNDECIDED` in `scripts/lint.test.ts` with
-the reason.
+no data flow. Use `violation` for a syntactically decidable breach and `review` for a
+pattern that needs a reader decision. If neither gives a useful finding, keep
+the don't in `UNDECIDED` in `scripts/lint.test.ts` with the reason. Run the
+commands below from the MISRA Zig repo root.
 
 ## How the checker is built
 
@@ -43,13 +44,16 @@ the reason.
    `catch {}`, `std.math.cast` instead of `@intCast` without a check, and the
    arena passed in. `misra-lint tools/misra_lint.zig` must stay clean. A
    justified exception carries `// misra-lint: allow <check> <reason>`.
-4. Remove the sample's key from `UNDECIDED` in `scripts/lint.test.ts`.
-5. Run misra-lint on a real Zig project outside this repo (any repo under
-   `~/Desktop/Projects` with `.zig` files) and read every new finding. A check
-   that fires on correct code there gets narrowed or becomes `review`.
-6. Run the gate: `zig fmt --check .`, `zig test -ODebug` and `-OReleaseSafe` on
-   `tools/misra_lint.zig`, `bun test scripts/`. The do samples and
+4. If the check now flags an `UNDECIDED` sample under its own rule, remove
+   that sample's key from `scripts/lint.test.ts`.
+5. Run misra-lint on an available Zig project outside this repo and read
+   every new finding. If none is available, report that the field test was
+   not run. A check that fires on correct code there gets narrowed or becomes
+   `review`.
+6. Run the full [canonical checks in AGENTS.md](../../AGENTS.md#checks),
+   including HTML and CSS validation with `vnu`. The do samples and
    `docs/examples/compliant.zig` must still lint clean.
-7. Update the check count and coverage numbers in `README.md` and
-   `docs/misra-lint.md` by measuring them (`misra-lint --checks`), never from
-   memory. Append an entry to `docs/ledger.md`.
+7. Measure the check count with `misra-lint --checks` and sample coverage
+   with `bun test scripts/lint.test.ts`. Update `docs/misra-lint.md` and any
+   affected status claims in `README.md`; never infer coverage from the check
+   count. Append an entry to `docs/ledger.md`.

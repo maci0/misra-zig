@@ -163,3 +163,19 @@ Append only. A reversal is a new entry.
 - Verified: `zig fmt --check .`; `compliant.zig` (10 tests) and `misra_lint.zig` (27 tests) in both Debug and ReleaseSafe; `bun test scripts/` (36 tests); `bun scripts/check_samples.ts` (all samples match); vnu HTML and CSS validation; site build; Wrangler deployment dry run.
 - Published: Worker version `3624842f-e6a7-4054-b85b-468a8071b7cb`, tagged v0.2.0, on misra-zig.dev and misra-zig.com. Both domains served HTML, scripts, rules, checks, handbook, and health matching the build; HTTP requests preserved paths and queries in 301 redirects to HTTPS; `POST /api/check` returned 404.
 
+## 2026-11-13: documentation review
+
+- What: reviewed the standard, handbook, checker reference, contributor skills, security and threat model, product and design records, ADRs, and documentation links. Removed duplicated check lists and stale design assumptions; added reader routes and local-server prerequisites. Clarified NaN comparisons, import reachability and its unguarded nesting reparse, generated-list and matcher limits, pointer and union preconditions, and the existing exhaustive-switch exception. Moved the sentinel-format note into the handbook's do section so generated JSON associates it with the correct example.
+- Why: the user requested a documentation-wide edit for accuracy, conciseness, readability, and structure, followed by repeated independent review passes.
+- Evidence: checked claims against the implementation and Zig 0.17.0 probes. The revised threat model distinguishes Host/Origin controls, compiler module-path restrictions, the absence of OS isolation, compile limits, shared caches, and diagnostic disclosure. Rule IDs, groups, sample marks, and all 138 sample blocks remain unchanged. Historical ledger entries, ADR decisions, and font licenses are preserved.
+- Decided by: the user (scope); wording aligned to existing rules and implementation.
+- Verified: Zig 0.17.0 formatting; compliant examples (10 tests) and misra-lint (27 tests) in Debug and ReleaseSafe; all 36 Bun tests; every handbook sample; HTML and CSS validation; static site build; local links and anchors; live JSON matching the handbook, including the switch exception and sentinel note placement. Browser rendering could not be inspected because the browser access host was unavailable.
+
+## 2026-11-13: release v0.3.0
+
+- What: released the documentation review on `main` as v0.3.0. Fetching all remotes confirmed that only `main` remains, with one worktree, no stashes, and no open pull requests; no additional merge was needed. No runtime source or Zig sample code changed.
+- Why: the user requested consolidation, a new minor release, commit and push, production deployment, and cleanup.
+- Verified: reused the preceding documentation review's Zig 0.17.0 gates; rebuilt the static site and passed the deployment dry run. All 14 published files matched the release build byte-for-byte on both domains; HTTP preserved path and query in the HTTPS redirect; the local-only checker endpoint and an unknown path returned 404. Browser rendering remains unverified as recorded above.
+- Published: Worker version `f4d208b7-9f38-47cc-8e49-0efe7e7bea5f`, tagged v0.3.0, on misra-zig.dev and misra-zig.com.
+- Cleanup: removed generated scratch files, site output, and project build and deployment caches. Preserved credentials, local settings, design question records, and tracked files.
+- Decided by: the user.

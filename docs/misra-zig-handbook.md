@@ -9,17 +9,21 @@ zig test -lc -ODebug docs/examples/compliant.zig
 zig test -lc -OReleaseSafe docs/examples/compliant.zig
 ```
 
-`-lc` links libc. The example file needs it for `std.c`. A Don't that calls `std.heap.c_allocator` needs it too, or the compiler rejects that call. A program that never touches libc does not need it.
+`-lc` links libc. The example file needs it for `std.c`, and a don't that calls `std.heap.c_allocator` needs it, or the compiler rejects that call. A program that never touches libc does not need it.
 
-A don't line is marked **rejected** when Zig 0.17.0 refuses to compile it, and **compiles** when the compiler accepts it and the code is still wrong. Debug and ReleaseSafe insert safety checks. ReleaseFast and ReleaseSmall delete them, and the same operation becomes illegal behavior. A panic in Debug is not a pass.
+A don't sample is marked **rejected** when Zig 0.17.0 refuses to compile it, and **compiles** when the compiler accepts it and the code is still wrong. Debug and ReleaseSafe insert safety checks. ReleaseFast and ReleaseSmall delete them, and the same operation becomes illegal behavior. A panic in Debug is not a pass.
 
-`+%`, `-%`, and `*%` are wraparound. `+|` and `-|` saturate. Plain `+`, `-`, and `*` trap on overflow in a safe build and are illegal behavior in ReleaseFast and ReleaseSmall.
+`+%`, `-%`, and `*%` wrap. `+|` and `-|` saturate. Plain `+`, `-`, and `*` panic on overflow in a safe build and are illegal behavior in ReleaseFast and ReleaseSmall.
 
 ## Directives
 
 ### Dir 4.1
 
-Runtime failure is a returned error, or a check that runs in every optimization mode. `@setRuntimeSafety` does not count. `std.debug.assert` and `unreachable` do not count either: in ReleaseFast and ReleaseSmall a false one is illegal behavior, so each states an assumption, not a check. `orelse unreachable`, `.?`, the `AssumeCapacity` methods, and `@divExact`, `@shlExact`, and `@shrExact` are assumptions in the same way. `std.math.divExact` and `std.math.shlExact` return errors instead. Some `std.posix` wrappers switch on errno with an `=> unreachable` prong, so an errno the OS can return becomes illegal behavior; `tools/std_lists.zig` lists them, generated from the installed std. Those calls go through `std.posix.system` with a `switch` on `std.posix.errno`. The build that ships does not hard-code `.ReleaseFast` or `.ReleaseSmall`, and keeps `sanitize_c` on. An operation that updates two structures reserves capacity in both before the first change, so an error leaves both as they were.
+Runtime failure is a returned error, or a check that runs in every optimization mode. `@setRuntimeSafety` does not count. `std.debug.assert` and `unreachable` do not count either: in ReleaseFast and ReleaseSmall a false one is illegal behavior, so each states an assumption, not a check. `orelse unreachable`, `.?`, the `AssumeCapacity` methods, and `@divExact`, `@shlExact`, and `@shrExact` are assumptions in the same way. `std.math.divExact` and `std.math.shlExact` return errors instead.
+
+Some `std.posix` wrappers switch on errno with an `=> unreachable` prong, so an errno the OS can return becomes illegal behavior. `tools/std_lists.zig`, generated from the installed std, lists them. Those calls go through `std.posix.system` with a `switch` on `std.posix.errno`.
+
+The build that ships does not hard-code `.ReleaseFast` or `.ReleaseSmall`, and keeps `sanitize_c` on. An operation that updates two structures reserves capacity in both before the first change, so an error leaves both as they were.
 
 #### Do
 
@@ -164,7 +168,9 @@ A numeric value that means a size, a count, or a wire field names its width and 
 pub const block_size: u32 = 512;
 ```
 
-`Header` is an `extern struct` because it has to match a C header. On the x86_64 System V ABI the `u64` forces 4 bytes of padding, so the size is 16 and the alignment is 8. On a target whose C alignment of a 64-bit integer is 4, the same struct is 12 bytes and the assert fails. A file format is an explicit decode from `[]u8` with a stated endianness. `packed struct` has the ABI of its backing integer, so its byte order is the target endianness, and a field cannot be an array. `extern` padding follows the target C ABI, so it is not a file format either.
+`Header` is an `extern struct` because it has to match a C header. On the x86_64 System V ABI the `u64` forces 4 bytes of padding, so the size is 16 and the alignment is 8. On a target whose C alignment of a 64-bit integer is 4, the same struct is 12 bytes and the assert fails.
+
+A file format is an explicit decode from `[]u8` with a stated endianness. `packed struct` has the ABI of its backing integer, so its byte order is the target endianness, and a field cannot be an array. `extern` padding follows the target C ABI, so it is not a file format either.
 
 ```zig
 const Header = extern struct {
@@ -325,7 +331,7 @@ fn readConfigUnbounded(dir: std.Io.Dir, io: std.Io, gpa: std.mem.Allocator) ![]u
 
 ### Dir 4.15
 
-A float computed from outside data is checked with `std.math.isFinite` before it is stored, compared, or converted. A zero divisor or an overflow gives an infinity, `0.0 / 0.0` gives NaN, and every comparison with NaN is false, so a range check such as `x > limit` lets NaN through. `@setFloatMode(.optimized)` is not used: in that mode the compiler may assume no operand or result is NaN or infinite, and the language reference calls the result undefined. A float that becomes an integer also follows Rule 10.3.
+A float computed from outside data is checked with `std.math.isFinite` before it is stored, compared, or converted. A nonzero value divided by zero, or an overflow, gives an infinity, and `0.0 / 0.0` gives NaN. With a NaN operand, `==`, `<`, `<=`, `>`, and `>=` are false and `!=` is true, so a range check such as `x > limit` lets NaN through. `@setFloatMode(.optimized)` is not used: in that mode the compiler may assume no operand or result is NaN or infinite, and the language reference calls the result undefined. A float that becomes an integer also follows Rule 10.3.
 
 #### Do
 
@@ -359,7 +365,7 @@ fn ratio(a: f64, b: f64) f64 {
 
 ### Dir 5.1
 
-Data written by one thread and read by another goes through `std.Io.Mutex` or `std.atomic.Value`. A plain variable shared between threads is a data race, which is illegal behavior.
+Data written by one thread and read by another goes through `std.Io.Mutex` or `std.atomic.Value`. Two unsynchronized accesses to one variable from different threads, at least one of them a write, are a data race, which is illegal behavior.
 
 #### Do
 
@@ -484,7 +490,7 @@ fn handle(conn: u32) void {
 
 ### Rule 1.5
 
-A declaration the Zig 0.17 standard library marks deprecated is not used. misra-lint checks every one, from a list generated out of the installed std (`tools/std_lists.zig`).
+A declaration the Zig 0.17 standard library marks deprecated is not used. misra-lint reports a use of a top-level `pub` declaration whose doc comment marks it deprecated, from a list generated out of the installed std (`tools/std_lists.zig`). A deprecated method inside a type is not listed (`docs/misra-lint.md`).
 
 #### Do
 
@@ -518,7 +524,7 @@ The test root names every file: `test { _ = @import("parser.zig"); }`.
 
 ### Rule 8.1
 
-The type is written on a container-level declaration, and on any declaration whose value is a literal. A local may take its type from a typed expression: a call, a typed name, or an operation on typed values.
+The type is written on a container-level declaration that holds a value (not a type or an `@import`), and on any declaration whose value is a literal. A local may take its type from a typed expression: a call, a typed name, or an operation on typed values.
 
 #### Do
 
@@ -576,7 +582,7 @@ fn readAt(a: anytype, b: anytype) void {
 
 ### Rule 8.4
 
-An `export` function has one signature, and it is the signature in the header. Callers inside Zig call the `pub` function. There is no second handwritten prototype. A C function comes from the header translated in `build.zig` (`addTranslateC`); a handwritten `extern fn` is for an ABI no header exposes, with a comment that names it.
+An `export` function has one signature, and it is the signature in the header. Zig callers use the same declaration, marked `pub` when another file calls it. There is no second handwritten prototype. A C function comes from the header translated in `build.zig` (`addTranslateC`); a handwritten `extern fn` is for an ABI no header exposes, with a comment that names it.
 
 #### Do
 
@@ -609,7 +615,7 @@ A function used in one file is not `pub`.
 
 #### Don't
 
-**Compiles.** `pub` on a helper used only in this file makes it visible to other Zig files. It does not create a linker symbol. `export` does that. It becomes API, and a later edit has to keep it stable.
+**Compiles.** `pub` on a helper used only in this file makes it visible to other Zig files, so it becomes API that a later edit has to keep stable. `pub` creates no linker symbol; `export` does.
 
 ```zig
 pub fn helperOnlyThisFileUses(n: u32) u32 {
@@ -744,7 +750,7 @@ var raw align(8) = std.mem.zeroes([16]u8);
 
 #### Don't
 
-**Compiles.** `size` is never stored. The return reads undefined padding and an undefined field.
+**Compiles.** `size` is never stored, so the returned `Header` has an undefined field.
 
 ```zig
 fn blank() Header {
@@ -919,7 +925,7 @@ fn opcodeByte(op: Opcode) u8 {
 }
 ```
 
-`zig fmt` writes `@backingInt`. That is the 0.17 builtin for the enum's integer value.
+`@backingInt` is the 0.17 builtin for the enum's integer value. `zig fmt` rewrites the older `@intFromEnum` to it.
 
 ```zig
 fn decode(byte: u8) error{Unknown}!Opcode {
@@ -1139,7 +1145,7 @@ export fn f(n: usize) void {
 
 ### Rule 15.1
 
-There is no `goto`. Cleanup is `defer` and `errdefer`. A retry has a bound and returns an error when the bound is hit. One cleanup path, not a jump back to an earlier label.
+There is no `goto`. Cleanup is `defer` and `errdefer`: one release path, not a jump back to an earlier label. A retry has a bound and returns an error when the bound is hit.
 
 #### Do
 
@@ -1177,7 +1183,7 @@ fn connect(dial: *const fn () error{Busy}!void) !void {
 
 ### Rule 16.3
 
-Prongs do not fall through. The compiler has no fallthrough. Two tags that share a body are one prong, joined with a comma. Do not paste the next case's body into this prong to fake the fall.
+Prongs do not fall through. Two tags that share a body are one prong, joined with a comma. Do not paste the next prong's body into this one to fake a fallthrough.
 
 #### Do
 
@@ -1222,7 +1228,7 @@ fn score(c: Color) u8 {
 
 ### Rule 16.4
 
-A `switch` on an enum or a tagged union lists every tag. `else` is for an integer, or for a non-exhaustive enum, and that prong handles the unknown value. An empty `else` swallows a new opcode.
+A `switch` on an enum or a tagged union lists every tag. `else` is for an integer, or for a non-exhaustive enum, and that prong handles the unknown value. On an exhaustive enum or tagged union whose value comes from outside (a `std.json.Value`), an `else` that returns an error is allowed: a new tag is refused at run time, not swallowed. An empty `else` swallows a new opcode.
 
 #### Do
 
@@ -1253,7 +1259,7 @@ fn ignore(code: u8) void {
 
 **Rejected.**
 
-An uncalled function is not analyzed, so the sample is `export`ed. The tag is `u8` so the diagnostic is the missing prong.
+An uncalled function is not analyzed, so the sample is `export`ed. The enum has a `u8` tag type because `export` refuses an enum parameter without one; the missing prong is then the only error.
 
 ```zig
 const E = enum(u8) { a, b };
@@ -1293,7 +1299,7 @@ export fn firstValue(count: c_int, ...) callconv(.c) f64 {
 
 ### Rule 17.2
 
-No runtime recursion, direct or through another function. A tree is a loop, an explicit stack with a fixed capacity, and a separate bound on how many nodes the loop visits. A cycle does not grow the stack, so the visit bound is what stops it. Recursion that exists only at `comptime`, to build a type, is a different mechanism. It is not a recursive algorithm, and `@setEvalBranchQuota` still bounds the compiler.
+No runtime recursion, direct or through another function. A tree is a loop, an explicit stack with a fixed capacity, and a separate bound on how many nodes the loop visits. A cycle does not grow the stack, so the visit bound is what stops it. Recursion that exists only at `comptime`, to build a type, is allowed: it is not a recursive algorithm, and `@setEvalBranchQuota` still bounds the compiler.
 
 #### Do
 
@@ -1355,6 +1361,8 @@ fn third(p: [*]const u32, len: usize) error{OutOfRange}!u32 {
     return items[2];
 }
 ```
+
+`p[0..len]` does not check that `p` points to `len` elements; the caller guarantees that. The function checks that a third element exists.
 
 #### Don't
 
@@ -1453,7 +1461,7 @@ fn wrongField(x: u32) f32 {
 
 ### Rule 19.3
 
-A `union(enum)` payload is read through a `switch` prong capture, or after a test of the tag in the same function. Reading a field that is not the active one panics in a safe build. ReleaseFast has no check and reads the other field's bits.
+A `union(enum)` payload is read through a `switch` prong capture, or after a test of the tag in the same function. Reading a field that is not the active one panics in a safe build. ReleaseFast has no check, and the read is illegal behavior; a 0.17.0 ReleaseFast run returned the other field's bits.
 
 #### Do
 
@@ -1476,7 +1484,7 @@ fn floatOf(v: Value) f32 {
 
 ### Rule 21.3
 
-`malloc`, `free`, and `std.heap.c_allocator` are not the allocator. Take `std.mem.Allocator`. `try` is the null check: `alloc` returns `error.OutOfMemory`.
+`malloc`, `free`, and `std.heap.c_allocator` are not the allocator. Take `std.mem.Allocator`. `try` propagates `error.OutOfMemory` from `alloc`.
 
 #### Do
 
@@ -1539,7 +1547,7 @@ fn decodeOrPanic(byte: u8) Op {
 
 ### Rule 21.17
 
-A copy or a format stays inside the destination object. Zig text is `[]const u8` (pointer and length). A C string is `[*:0]const u8`, and `std.mem.span` runs only when a zero sits inside that object.
+A copy or a format stays inside the destination object. Zig text is `[]const u8` (pointer and length). A C string is `[*:0]const u8`, and `std.mem.span` is called only on a pointer whose terminating zero lies inside the object.
 
 #### Do
 
@@ -1560,6 +1568,8 @@ fn copyBounded(dest: []u8, src: []const u8) error{NoSpaceLeft}!void {
 
 `std.mem.print` returns `error.NoSpaceLeft` instead of writing past `buf`. The returned slice points at `buf`, so `buf` has to outlive it. `std.fmt.bufPrint` is deprecated. `@memcpy` requires equal lengths and no overlap. A helper that takes two slices from its caller cannot know whether they overlap, so `copyBounded` uses `@memmove`.
 
+Use `std.mem.printSentinel` when the result has to be `[:0]u8`. The sentinel is inside the buffer you passed.
+
 #### Don't
 
 **Compiles.** `span` walks until a zero. If `raw` is a length-delimited buffer with no terminator inside it, the walk leaves the object. Safe builds do not know where the object ends.
@@ -1578,8 +1588,6 @@ fn terminate(buf: []u8) void {
 }
 ```
 
-Use `std.mem.printSentinel` when the result has to be `[:0]u8`. The sentinel is inside the buffer you passed.
-
 ### Rule 21.18
 
 The length passed to a copy is the length of the smaller object, and it is checked against both sides. `@memcpy` will accept any `n` you slice to. The check is yours, because ReleaseFast does not bounds-check.
@@ -1590,7 +1598,7 @@ The length passed to a copy is the length of the smaller object, and it is check
 
 #### Don't
 
-**Compiles** as an ordinary function. `n` from the caller is used as both lengths. If `n` is larger than either slice, a safe build panics and ReleaseFast writes off the end.
+**Compiles** as an ordinary function. `n` from the caller is used as both lengths. If `n` is larger than either slice, a safe build panics and ReleaseFast reads or writes past the end of that slice.
 
 ```zig
 fn copyN(dest: []u8, src: []const u8, n: usize) void {
@@ -1714,7 +1722,7 @@ fn bothEnds(dir: std.Io.Dir, io: std.Io, name: []const u8) !void {
 
 ### Rule 22.4
 
-A handle opened `.read_only` is only read. On Linux, Zig 0.17, `writeStreamingAll` on that handle returns `error.NotOpenForWriting`. The tested sample is the last lines of `docs/examples/compliant.zig`.
+A handle opened `.read_only` is only read. With Zig 0.17 on Linux, `writeStreamingAll` on that handle returns `error.NotOpenForWriting`; the test "one file handle" in `docs/examples/compliant.zig` checks it.
 
 #### Do
 
@@ -1808,7 +1816,7 @@ fn untilFf(buf: []const u8) usize {
 
 ### Rule 22.8
 
-Zig's own error unions are not `errno`. With `-lc`, `std.posix` is libc and `std.Io` can call it, so those calls can change `errno` too. Set `errno` to 0 on the line before the libc call you mean, and read it before any later call.
+Zig's own error unions are not `errno`. With `-lc`, `std.posix` calls libc and `std.Io` can too, so those calls can change `errno`. Set `errno` to 0 on the line before the libc call you mean, and read it before any later call.
 
 #### Do
 
@@ -1837,7 +1845,7 @@ fn tooLate(path: [*:0]const u8) c_int {
 
 ### Rule 22.9
 
-Read `errno` only when the call reported failure, and use that value before you do anything else. The report is `-1`, a null pointer, or, for a call such as `strtoul` whose result cannot signal failure, a non-zero `errno` after the function cleared it to 0 just before the call. `std.c.errno` reads it for a return of `-1`. If you read it yourself, keep the same order.
+Read `errno` only when the call reported failure, and use that value before you do anything else. The report is `-1`, a null pointer, or, for a call such as `strtoul` whose result cannot signal failure, a non-zero `errno` after the caller cleared it to 0 just before the call. `std.c.errno(rc)` reads it when `rc` is `-1`. If you read it yourself, keep the same order.
 
 #### Do
 

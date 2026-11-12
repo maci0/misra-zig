@@ -13,7 +13,8 @@ zig run -ODebug tools/misra_lint.zig -- --root src/main.zig src/*.zig  # also: f
 echo 'fn f() void { g() catch {}; }' | zig run tools/misra_lint.zig -- -
 ```
 
-Exit 0: no finding. Exit 1: at least one finding. Exit 2: usage or read error.
+Exit 0: no findings. Exit 1: findings, including `review` and `parse_error`.
+Exit 2: usage or read error. `--help` and `--checks` exit 0.
 
 ```
 t.zig:2:9: violation[catch_empty] Dir 4.1: catch {} discards the error, and so does a handler that only discards its capture. Propagate it with try or handle each error.
@@ -35,8 +36,9 @@ t.zig:2:9: violation[catch_empty] Dir 4.1: catch {} discards the error, and so d
 installed Zig std (`zig env`):
 
 - `deprecated`: every top-level `pub` declaration whose doc comment starts
-  `Deprecated` or says `This function is deprecated`, with the replacement it
-  names. `deprecated_api` reports a use and shows the replacement.
+  `Deprecated` or `This function/declaration/type/constant is deprecated`,
+  with a replacement when the comment names one. `deprecated_api` reports a
+  use and shows the replacement.
 - `posix_assumes_errno`: every `std.posix` function with an errno prong that is
   `=> unreachable`. `posix_assumes_errno` reports a call.
 
@@ -46,29 +48,35 @@ inside a type are not listed: a method call names no type in the syntax tree.
 
 ## Files the root does not reach
 
-`--root ROOT FILE...` follows `@import("x.zig")` string literals from ROOT,
-resolving each path against the importing file's directory, and reports every
-FILE it does not reach (`unreachable_file`, Rule 2.1). Only the files named on
-the command line are considered, and an import built at compile time is not
-followed.
+`--root ROOT FILE...` follows literal `@import("x.zig")` paths, resolving each
+against the importing file's directory. It reports each supplied FILE it does
+not reach (`unreachable_file`, Rule 2.1). Include ROOT and every intermediate
+imported file in FILE...: the checker does not load missing files. Computed
+imports and named modules are not followed. Reachability does not prove every
+declaration was analyzed; Zig also requires declarations to be referenced.
 
 ## Silencing one finding
 
 `// misra-lint: allow <check> <reason>` in a comment on the finding's line, or
-on a line above it that holds only that comment. The reason is required; a
-comment without one silences nothing. Text inside a string literal is not a
+on the immediately preceding line if that line holds only the comment. A
+reason is required; a comment without one silences nothing. Text inside a string literal is not a
 comment, and a trailing comment on one line does not reach the next. The
 checker's own switches over `std.zig.Ast.Node.Tag` and `std.zig.Token.Tag`
 carry allow comments: those enums belong to the standard library and have
 hundreds of tags.
 
-## Input it refuses to parse
+## Nesting limit
 
 `std.zig.Ast.parse` recurses once per nesting level, and about 2000 nested
-parentheses exhausted its stack. Before parsing, the tokenizer (which does not
+parentheses exhausted its stack. Before the per-file lint pass parses, the tokenizer (which does not
 recurse) measures bracket nesting and runs of prefix operators (`!!!x`,
 `****T`). Past 256 levels the file gets one `parse_error` finding, "nesting
-deeper than 256 levels", and no other check runs.
+deeper than 256 levels", and that lint pass stops.
+
+The `--root` import pass calls `Ast.parse` again without the nesting guard,
+including on reached files that already have a `parse_error`. Its recursive
+parser is not protected by the 256-level limit. Resolve parse errors in a
+run without `--root` before checking reachability.
 
 ## Coverage
 
@@ -124,7 +132,8 @@ Measured with `misra-lint --checks` and `bun test scripts/lint.test.ts`:
 - `enum_else` takes a `switch` as an enum switch when every other prong names
   `.tags`. An `else` that returns `error.X` is not reported; one that calls a
   helper to fail (`return lib.fail(...)`) is.
-- `main`, a test block, and `fn build(b: *std.Build)` count as entry points for
+- `main`, a test block, code outside any function, and
+  `fn build(b: *std.Build)` count as entry points for
   `terminate_outside_main`, `thread_outside_main`, and `io_outside_main`. A
   helper function of a `build.zig` does not, so a `@panic` there is reported.
 - `ptrcast_reinterpret` exempts a `@ptrCast` of a name declared with `u8` in
@@ -140,8 +149,9 @@ Measured with `misra-lint --checks` and `bun test scripts/lint.test.ts`:
 - `memcpy_alias` compares the sliced expressions as written. Two names for
   one buffer are not seen, and two slices of one buffer that cannot overlap
   are still reported, which is why it is `review`.
-- `atomic_order` reads an ordering written as an enum literal in a call to a
-  `std.atomic.Value` method or an `@atomic` builtin; an ordering passed
+- `atomic_order` matches atomic builtin names and method names such as `load`
+  and `store`, without knowing the receiver type. An unrelated method with a
+  matching name and ordering enum argument can trigger it. An ordering passed
   through a constant is not seen.
 - `lock_twice` matches receivers as written, inside one function. A `defer`
   unlock frees the mutex at the end of its block, and an `errdefer` unlock
@@ -183,5 +193,5 @@ that fixed it reports none.
 One flat pass over the node array, then one pass per function, then file-wide
 passes for opened paths and the call graph. There is no recursive tree walk,
 and the call graph walk reuses one scratch array and stack, so the tool keeps
-Rule 17.2 itself. `skills/misra-lint-check/SKILL.md` describes how to add a
-check.
+Rule 17.2 itself. The [check-writing skill](../skills/misra-lint-check/SKILL.md)
+describes how to add a check.

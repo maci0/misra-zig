@@ -1,25 +1,26 @@
 # Security policy
 
-The surface and how to reach it are mapped in
+The local server, the published site, and the deploy path are mapped in
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md). This file covers versions and
 reporting only.
 
 ## Supported versions
 
-The checker and site target Zig 0.17.0 and Bun, as the README states.
-There is no release channel; fixes land on the main branch, and the
-published site is rebuilt from it.
+Local tooling targets Zig 0.17.0 and Bun. Releases are tagged in Git and
+published on [GitHub](https://github.com/maci0/misra-zig/releases). Fixes
+land on `main`; no backport policy is documented. The published handbook
+is static and is deployed from `main`.
 
 ## Reporting
 
-There is no published disclosure contact or advisory process today; that
-gap is recorded in the threat model. No supported disclosure path is
-established here.
+There is no published disclosure contact or advisory process. A report has
+no documented path to a fix.
 
 ## What this project does not do
 
 No account system, no database, no personal data. The local checker server
 (`scripts/server.ts`) listens on `127.0.0.1` only and compiles untrusted
-samples without running them; the published site (`scripts/worker.ts`)
-serves static assets and never runs a compiler. The Zig standard itself,
-not this repo, is the authority on the rules in `AGENTS.md`.
+samples with `zig test --test-no-exec`; it does not run the sample. The
+published site (`scripts/worker.ts`) serves static assets and never runs a
+compiler. The Zig obligations in `AGENTS.md` are this repo's text, not a
+statement of the Zig language reference.
