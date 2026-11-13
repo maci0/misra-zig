@@ -197,3 +197,12 @@ Append only. A reversal is a new entry.
 - Evidence: three new tests failed first for the reported reasons (binary bytes differ; "Zig did not finish within 60 seconds." for an immediate SIGKILL; `used.zig` reported unreachable when ROOT was not listed), then passed. `gen_std_lists.ts --check` passes on 0.17.0 and 0.17.1 with identical lists.
 - Decided by: the user (fix request); keeping the version out of the generated header, rather than switching the host's default Zig, was chosen here.
 - Verified: full checks with Zig 0.17.0 and again with 0.17.1: `zig fmt --check .`, `compliant.zig` (10 tests) and `misra_lint.zig` (27 tests) in Debug and ReleaseSafe, `bun test scripts/` (39 pass), `check_samples.ts`, vnu on HTML and CSS.
+
+## 2026-11-13: release v0.4.0
+
+- What: released the documentation accuracy pass and the server, check, and linter fixes on `main` as v0.4.0. `main` was the only branch, with one worktree, no stashes, and no open pull requests, so nothing needed merging.
+- Why: the user requested consolidation, a new minor release, commit and push, production deployment, and cleanup.
+- Verified: the preceding entry's checks with Zig 0.17.0 and 0.17.1; `build_site.ts` and a deployment dry run. All 14 published files matched the release build byte for byte on both domains; HTTP kept path and query in the 301 to HTTPS; `POST /api/check` and an unknown path returned 404.
+- Published: Worker version `50be52b4-a107-499c-b168-dfa47c89d498`, tagged v0.4.0, on misra-zig.dev and misra-zig.com.
+- Cleanup: removed generated scratch files, site output, and build, test, and deployment caches. Preserved credentials, local settings, design question records, and tracked files.
+- Decided by: the user.
