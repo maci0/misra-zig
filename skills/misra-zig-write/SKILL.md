@@ -23,9 +23,9 @@ are gone? A panic in Debug is not a pass.
 | Divide signed values | `std.math.divTrunc(i32, a, b)` | `@divTrunc` on outside values | Dir 4.1 |
 | Narrow or change signedness of an outside value | `std.math.cast(u16, x) orelse error.Overflow` | `@intCast(x)` with no check, `@truncate(x)` | Rule 10.3 |
 | Shift by an outside amount | compare with `@bitSizeOf` first, then `@intCast` | `x << @intCast(amount)` | Rule 10.1 |
-| Integer from a file or wire to an exhaustive enum | `std.enums.fromInt(E, x) orelse error.Unknown` (a non-exhaustive enum accepts every value; `switch` with `_`) | `@fromBackingInt(x)`, which `zig fmt` writes for `@enumFromInt` | Rule 10.5 |
+| Integer from a file or wire to an exhaustive enum | `std.enums.fromInt(E, x) orelse error.Unknown` (a non-exhaustive enum accepts every value; `switch` with `_`) | `@fromBackingInt(@intCast(x))`, which `zig fmt` writes for `@enumFromInt(x)` | Rule 10.5 |
 | Float to integer | check finite and in range (`if (!(x >= 0.0 and x < max))`), then `@trunc` | `@trunc` or `@intFromFloat` unchecked | Rule 10.3 |
-| Float from outside data | `if (!std.math.isFinite(x)) return error.NotFinite;` before storing or comparing | `x > limit` on a possible NaN; `@setFloatMode(.optimized)` | Dir 4.15 |
+| Float from outside data | `if (!std.math.isFinite(x)) return error.NotFinite;`, or a range check NaN fails with finite bounds (`if (!(x >= lo and x < hi))`), before storing or comparing | `x > limit` on a possible NaN; `@setFloatMode(.optimized)` | Dir 4.15 |
 | Pass a value to a std function | check its precondition first (`if (i >= list.items.len)`, `if (x == 0)`); read the body for `assert` | `list.orderedRemove(i)`, `std.math.log2_int(T, x)` on outside values | Dir 4.11 |
 | Lookup that can miss | `map.get(k) orelse error.Unknown` | `map.get(k).?`, `orelse unreachable` | Dir 4.1 |
 | Append without allocating | `ensureUnusedCapacity(gpa, n)` for all n items, then `AssumeCapacity` | an `AssumeCapacity` call with no reserve, or a short one | Dir 4.1 |
@@ -34,7 +34,7 @@ are gone? A panic in Debug is not a pass.
 | Bad input in a library | return an error | `@panic`, `std.debug.panic`, `std.process.exit` outside `main` | Rule 21.8 |
 | Not found | return `?T` or an error | `-1`, `std.math.maxInt` (except at a C ABI) | Dir 4.7 |
 | A std declaration | the name `misra-lint` suggests (`findScalar`, `std.mem.print`, `Allocator.print`) | anything in `tools/std_lists.zig` `deprecated` | Rule 1.5 |
-| An OS call | `std.posix.system.call(...)` and `switch (std.posix.errno(rc))` with an error per errno | a `std.posix` wrapper listed in `posix_assumes_errno` | Dir 4.1 |
+| An OS call | `std.posix.system.<fn>(...)` (such as `setsockopt`) and `switch (std.posix.errno(rc))` with an error per errno | a `std.posix` wrapper listed in `posix_assumes_errno` | Dir 4.1 |
 | Get an `std.Io` | take `io: std.Io` as a parameter; only `main` builds one | `std.Io.Threaded.init` in a helper | Dir 4.12 |
 | Worker threads | a fixed array spawned once at start-up, joined on every path | `spawn` per request, in a `while`, or `detach` | Dir 5.3 |
 | Data two threads touch | `std.atomic.Value` or `std.Io.Mutex` for shared writes | unsynchronized shared writes | Dir 5.1 |

@@ -181,7 +181,7 @@ Tokens and component metrics in the frontmatter match `site/site.css`. `.impecca
 - **red-text** (`#b71c1c`, dark `#e8463f`): links, section numerals, the "Rule" or "Dir" word, table caption labels, the lit pin name, failing status, search hit ids. In dark, `--red` and `--red-text` are both `#e8463f`.
 - **ok** (`#0d6a39`, dark `#5fd28f`): the ok tick and a clean check status.
 - **warn** (`#8a5800`, dark `#f2b84e`): stroke of the review diamond.
-- **sheet, ink, ink-2, hair, head, code, row, sel**: page, body ink, secondary ink, hairline, table-head grey, source paper, lit row, selection. **on-bar** (`#ffffff`): text and focus outline inside the bar. The search border is white at 55% and its fill is black at 16%.
+- **sheet, ink, ink-2, hair, head, code, row, sel**: page, body ink, secondary ink, hairline, table-head grey, source paper, lit row, selection. **on-bar** (`#ffffff`): text and focus outline inside the bar.
 
 The bar is the only large red field. Elsewhere red is a stroke, a numeral, a link, a marker, or a shape at most 0.9rem tall.
 
@@ -229,11 +229,11 @@ Buttons, inputs, the theme switch, figures, the editor, tables, and the search l
 
 ## Components
 
-**Primary button.** Ink fill, sheet text, 2px ink border, condensed 700 at 1rem, tracking 0.02em, padding 0.55rem 1.1rem. "Evaluate a file" is a bar link; "Check with Zig" is this button. Hover and focus-visible: red fill, red border, on-bar text. The global focus outline is 2px red at 2px offset. Disabled: head fill, hairline border, ink-2 text, `cursor: progress`.
+**Primary button.** Ink fill, sheet text, 2px ink border, condensed 700 at 1rem, tracking 0.02em, padding 0.55rem 1.1rem. "Evaluate a file" is a bar link; "Check with Zig" is this button. Hover: red fill, red border, on-bar text. Focus-visible draws the global focus outline, 2px red at 2px offset. Disabled: head fill, hairline border, ink-2 text, `cursor: progress`.
 
 **Quiet control.** No box. red-text, 0.9375rem, underline 1px, 2px on hover. Edit and check, Restore, Copy, Clear, Close the editor.
 
-**Search.** 15rem, square, on-bar border at 55%, black fill at 16%, on-bar text, placeholder "Find a rule  /". Focus: sheet background, ink text, red caret, 2px on-bar outline. The list is `min(32rem, 90vw)`, 2px ink border. Each row is a 5rem condensed red-text id and the title; hover and focus use head grey.
+**Search.** 15rem, square, on-bar border at 55%, black fill at 16%, on-bar text, placeholder "Find a rule  /". Focus: sheet background, ink text, red caret, 2px on-bar outline. The list is `min(32rem, 90vw)`, 2px ink border. Each row is the rule label (`Rule 10.6`) in a 5rem condensed red-text column, then the title; hover and focus use head grey.
 
 **Editor.** Source paper, 1px hairline, 2px ink top, 3.75rem gutter (2.75rem under 48rem). Findings put a 0.55rem verdict shape on the gutter line. Highlighted source sits under a transparent textarea. `:focus-within` draws a 2px red outline inset 1px (`outline-offset: -1px`).
 

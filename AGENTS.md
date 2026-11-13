@@ -1,6 +1,6 @@
 # Zig 0.17 coding standard
 
-Rules inspired by MISRA C, applied to Zig 0.17.0. Seven groups. The rules are the ones named below, not the whole of MISRA C, and the ids are MISRA C:2025 numbers. `docs/misra-c-2025.md` places every C:2025 guideline: adopted here, rejected by the compiler, without a Zig counterpart, or left out, with the reason. Worked do and don't samples are in `docs/misra-zig-handbook.md`. Names and whitespace follow the Zig 0.17 language reference style guide: `zig fmt` is the formatter and it has no config file.
+Rules inspired by MISRA C, applied to Zig 0.17.0. Seven groups. The rules are the ones named below, not the whole of MISRA C, and the ids are MISRA C:2025 numbers. `docs/misra-c-2025.md` gives every C:2025 guideline a status and the reason. Worked do and don't samples are in `docs/misra-zig-handbook.md`. Names and whitespace follow the Zig 0.17 language reference style guide: `zig fmt` is the formatter and it has no config file.
 
 A safety check in Debug or ReleaseSafe is not compliance. ReleaseFast and ReleaseSmall delete those checks, and the same operation becomes illegal behavior. Guard the input, or call a function that returns an error. Do not use `@setRuntimeSafety(false)` to quiet a check.
 
@@ -16,7 +16,7 @@ These C rules need no extra convention:
 - Assignment is not an expression, so a condition cannot assign.
 - A non-void result cannot be dropped and an error union cannot be ignored: `_ =` discards on purpose, `try` or `catch` handles. Unused locals and parameters, and shadowing, are errors.
 - A literal with a leading zero (`010`) is rejected. Octal is `0o10`.
-- Code after a `return`, an unused label, an array literal shorter than its type, a field named twice in one literal, two enum tags with one value, a comptime-known value that does not fit its type, a non-void function that can reach its end, a `noreturn` function that returns, an assignment to a parameter, `if (p)` on an optional, and `<` between two pointers are all rejected.
+- Code after a `return`, an unused label, an array literal shorter than its type, a field named twice in one literal, two enum tags with one value, a comptime-known value that does not fit its type, a non-void function that can reach its end, a `noreturn` function that returns, an assignment to a parameter, `if (p)` on an optional, `<` or `>` between two `*T` or `[*]T` pointers (`[*c]T` still compares), `/` between two runtime signed integers, two `switch` prongs with one value, a string literal assigned to `[]u8`, and a declaration named after a primitive type (`const u8 = 1`) are all rejected.
 - `allocator.alloc` returns `error.OutOfMemory` instead of a null pointer.
 - A slice carries its length. There is no `strcpy`.
 
@@ -28,6 +28,7 @@ Each group cites the MISRA directive or rule it is inspired by. These do not fol
 - Rule 9.2 is about braces in an initializer, which Zig has no partial form of. Here it also carries MISRA Rule 9.3's content: every field and element is written.
 - Rule 15.1 forbids `goto`, which Zig does not have. Here it also asks for a bound on every retry loop.
 - Rule 8.8 asks for `static` on internal linkage. In Zig that is the absence of `pub`, so here it forbids republishing a file-local function through a `pub` wrapper.
+- Rule 21.8 forbids `abort`, `exit`, `getenv`, and `system`. Here it covers only ending the process; reading the environment and running a shell are left out.
 
 ## 1. Types, portability, and arithmetic
 
@@ -69,9 +70,9 @@ fn narrow(wide: u32) error{Overflow}!u16 {
 }
 ```
 
-`@truncate` means the low bits are the result. `@bitCast` reinterprets the same width. It is not a numeric conversion. `@intCast` is only legal after a check that proves the value fits, and that check sits in the same function. An integer from outside becomes an enum through `std.enums.fromInt`, which returns null for a value with no tag. `@fromBackingInt` (`zig fmt` rewrites `@enumFromInt` to it) is for a value already proven to be a tag. A non-exhaustive enum (`_`) accepts every value of its backing type, so its `switch` handles the unknown values. A float becomes an integer (`@trunc`, `@floor`, `@ceil`, `@round`) only after a check that it is finite and in range; a safe build does not catch every bad value (NaN gave 0 in a 0.17.0 Debug run).
+`@truncate` means the low bits are the result. `@bitCast` reinterprets the same width. It is not a numeric conversion. `@intCast` is only legal after a check that proves the value fits, and that check sits in the same function. An integer from outside becomes an enum through `std.enums.fromInt`, which returns null for a value with no tag. `@fromBackingInt` is for a value already proven to be a tag; `zig fmt` rewrites `@enumFromInt(x)` to `@fromBackingInt(@intCast(x))`, and that `@intCast` needs its own check. A non-exhaustive enum (`_`) accepts every value of its backing type, so its `switch` handles the unknown values. A float becomes an integer (`@trunc`, `@floor`, `@ceil`, `@round`) only after a check that it is finite and in range; a safe build does not catch every bad value (NaN gave 0 in a 0.17.0 Debug run).
 
-A float computed from outside data passes `std.math.isFinite` before it is stored, compared, or converted. With a NaN operand, `==`, `<`, `<=`, `>`, and `>=` are false (`!=` is true), so `x > limit` lets NaN through. `@setFloatMode(.optimized)` is not used: it lets the compiler assume no operand or result is NaN or infinite.
+A float computed from outside data passes `std.math.isFinite` before it is stored, compared, or converted. With a NaN operand, `==`, `<`, `<=`, `>`, and `>=` are false (`!=` is true), so `x > limit` lets NaN through. A range check that NaN fails, `if (!(x >= lo and x < hi)) return error.OutOfRange;` with finite bounds, also rejects both infinities and counts as that check. `@setFloatMode(.optimized)` is not used: it lets the compiler assume no operand or result is NaN or infinite.
 
 Signed division is `std.math.divTrunc`, `std.math.divFloor`, `std.math.divCeil`, or `std.math.divExact`. Each returns `error.DivisionByZero` or `error.Overflow`, and `std.math.divExact` also returns `error.UnexpectedRemainder`. The overflow case is the minimum signed value divided by `-1`. `@divExact`, `@shlExact`, and `@shrExact` assume instead of checking; `std.math.divExact` and `std.math.shlExact` return the error. `/` does not compile for two runtime signed integers. Unsigned `/` still faults on zero in safe modes and is illegal behavior in ReleaseFast.
 
@@ -102,7 +103,7 @@ fn lenOf(p: ?[]const u8) usize {
 
 `[*c]T` and `allowzero` stay in the file that talks to C. Convert to `[]T` or `?*T` there. Coercing a `[*c]T` of address 0 to `*T` is a safety-checked fault in Debug and illegal behavior in ReleaseFast. A union that holds one of several values is `union(enum)`, and its payload is read through a `switch` capture or after a test of the tag. A bare `union` is not used. Reading a field other than the stored one is illegal behavior in ReleaseFast, tagged or not. `extern union` and `packed union` are for a C header or a register layout, in the file that talks to it.
 
-A pointer to one object type is not cast to a pointer to another; a value is reinterpreted with `@bitCast`. `@ptrCast` to an `extern` or `packed` type is the one expression that overlays a struct on bytes, and only after `slice.len >= @sizeOf(T)`. `@alignCast` follows an alignment test. `@intFromPtr` and `@ptrFromInt` are not a cast between two pointee types. `headerOf` in `docs/examples/compliant.zig` is that check.
+A pointer to one object type is not cast to a pointer to another; a value is reinterpreted with `@bitCast`. `@ptrCast` to an `extern` or `packed` type is the one expression that overlays a struct on bytes, and only after `slice.len >= @sizeOf(T)`. `@alignCast` follows an alignment test; `headerOf` in `docs/examples/compliant.zig` makes both checks. `@intFromPtr` and `@ptrFromInt` are not a cast between two pointee types.
 
 ## 3. Memory and other resources
 
@@ -126,7 +127,7 @@ fn take(allocator: std.mem.Allocator, n: usize) ![]u8 {
 }
 ```
 
-`std.ArrayList(T)` in 0.17 does not store the allocator. Pass it on each call and free with the same one.
+`std.ArrayList(T)` in 0.17 does not store the allocator. Pass it to each call that takes one and free with the same one.
 
 ```zig
 var list: std.ArrayList(u32) = .empty;
@@ -148,23 +149,25 @@ defer mu.unlock(io);
 
 With `-lc`, `std.posix` calls libc and `std.Io` can too. Either one may replace `errno`. Read `errno` before any later call, including an `std.Io` call.
 
+End of file from `readStreaming` is `error.EndOfStream`. A returned length of 0 is not end of file. Do not map the error onto 0.
+
 ## 4. Functions and linkage
 
 MISRA Dir 4.7, Dir 4.11, Rule 1.5, Rule 8.2, Rule 8.4, Rule 8.7, Rule 8.8, Rule 17.1, Rule 17.2, Rule 21.8.
 
 Failure and not-found are an error or `?T`, and the caller handles them. An in-band value (`-1`, `std.math.maxInt`) is used only where a C ABI requires it.
 
-A declaration the 0.17 std marks deprecated is not used. `tools/std_lists.zig`, generated from the installed std by `bun scripts/gen_std_lists.ts`, lists the top-level `pub` declarations whose doc comment marks them deprecated. A deprecated method inside a type is not listed; `docs/misra-lint.md` gives the limits.
+A declaration the 0.17 std marks deprecated is not used. `tools/std_lists.zig`, generated from the installed std by `bun scripts/gen_std_lists.ts`, lists the top-level `pub` declarations of each std file whose doc comment marks them deprecated; `docs/misra-lint.md` gives the limits.
 
 A declaration without `pub` is file scope, the Zig form of C's `static`. `pub` makes it visible to other Zig files and creates no linker symbol. `export fn` is the C ABI: the parameter types and the `extern struct` layouts match the header, and the return type is the header's type, not `usize` standing in for `uint32_t`. A C function comes from the header translated in `build.zig` (`addTranslateC`); a handwritten `extern fn` is for an ABI no header exposes, with a comment that names it.
 
 Every parameter has a name and a type. `anytype` is for a generic whose body rejects a bad type at compile time. It is not on an `export` function.
 
-Inferred error sets (`!T`) are the default inside a module. Name the set wherever the caller branches on which error it is. An `export` function cannot return an error union: it returns the header's status type and maps each error to a code. `anyerror` is not a return type. `try` propagates. `catch {}` and `catch unreachable` are not error handling.
+Inferred error sets (`!T`) are the default inside a module. Name the set wherever the caller branches on which error it is. An `export` function cannot return an error union: it returns the header's status type and maps each error to a code. `anyerror` is not a return type. `try` propagates. `catch {}` and `catch unreachable` are not error handling (Dir 4.1).
 
-`unreachable` is unchecked illegal behavior if it runs. Use it when a local invariant already proves the path is dead, not when outside data is merely unexpected. `std.debug.assert` is `if (!ok) unreachable`: it states an invariant this module already proves. It never validates input from a caller, a file, or C. A `std.posix` wrapper that maps an errno to `unreachable` (listed in `tools/std_lists.zig`) is called through `std.posix.system` with a `switch` on `std.posix.errno` instead.
+`unreachable` is unchecked illegal behavior if it runs. Use it when a local invariant already proves the path is dead, not when outside data is merely unexpected. `std.debug.assert` is `if (!ok) unreachable`: it states an invariant this module already proves. It never validates input from a caller, a file, or C. A `std.posix` wrapper that maps an errno to `unreachable` (listed in `tools/std_lists.zig`) is called through `std.posix.system` with a `switch` on `std.posix.errno` instead (Dir 4.1).
 
-The build that ships does not hard-code `.ReleaseFast` or `.ReleaseSmall` and keeps `sanitize_c` on. An update to two structures reserves capacity in both before the first change. Only `main` ends the process: a library returns an error instead of calling `@panic`, `std.debug.panic`, or `std.process.exit`.
+The build that ships does not hard-code `.ReleaseFast` or `.ReleaseSmall` and keeps `sanitize_c` on. An update to two structures reserves capacity in both before the first change (Dir 4.1). Only `main` ends the process: a library returns an error instead of calling `@panic`, `std.debug.panic`, or `std.process.exit`.
 
 A value passed to a std function meets that function's preconditions, and the caller checks it first. Many std functions assert an argument instead of returning an error (`orderedRemove`, `std.math.log2_int`), and the doc comment does not always say so: read the body. No variadic function is defined: `@cVaStart` reads arguments that nothing counts or types. Take a slice.
 
@@ -174,7 +177,7 @@ No runtime recursion. A tree or a chain is a loop, an explicit stack with a fixe
 
 MISRA Rule 2.1, Rule 12.1, Rule 13.4, Rule 14.4, Rule 15.1, Rule 16.3, Rule 16.4.
 
-Every source file is reachable from the test root through `@import`; Zig analyzes only what is referenced. `misra-lint --root ROOT FILE...` reports a FILE the root does not reach.
+Every source file is reachable from the test root through `@import`; Zig analyzes only what is referenced. `zig run -ODebug tools/misra_lint.zig -- --root ROOT FILE...` reports a FILE the root does not reach; list ROOT and every intermediate import in FILE... too.
 
 `if` and `while` take a `bool`, an optional, or an error union. They do not take an integer. `for` walks a slice, an array, or a range. A bare integer is not one of those.
 
@@ -223,8 +226,6 @@ A value from outside sizes nothing until it is checked: a length field is compar
 
 An index or a slice from outside is checked against `len` before use. The built-in bounds check is absent in ReleaseFast. A sentinel slice (`[:0]u8`) owns its trailing zero. Do not store a zero one past a `[]u8`.
 
-End of file from `readStreaming` is `error.EndOfStream`. A returned length of 0 is not end of file. Do not map the error onto 0.
-
 ## 7. Threads, locks, and atomics
 
 MISRA Dir 5.1, Dir 5.2, Dir 5.3, Rule 21.25.
@@ -258,17 +259,17 @@ vnu --format text site/index.html
 vnu --css --format text site/site.css
 ```
 
-There is no `build.zig`. `zig test` needs the file. `-lc` is required because the file calls libc. `std.testing.allocator` fails the test on a leak, a double free, or a free of memory it did not hand out. `std.testing.checkAllAllocationFailures` covers a function that allocates more than once. ReleaseFast is not the compliance build.
+Run these with Zig 0.17.0 as `zig` on `PATH`: `tools/std_lists.zig` names the version it was generated from, so `bun test scripts/` fails under any other release. The Bun scripts run `ZIG` when it is set, else `zig` on `PATH`. There is no `build.zig`. `zig test` needs the file. `-lc` is required because the file calls libc. `std.testing.allocator` fails the test on a leak, a double free, or a free of memory it did not hand out. `std.testing.checkAllAllocationFailures` covers a function that allocates more than once. ReleaseFast is not the compliance build.
 
-`bun test scripts/` builds misra-lint into `.scratch/bin/` and checks it against the handbook: every do sample lints clean, and every don't marked compiles is flagged under its own rule or listed in `UNDECIDED` in `scripts/lint.test.ts` with what a syntax tree cannot see. `check_samples.ts` compiles every sample and compares the result with its mark.
+`bun test scripts/` builds misra-lint into `.scratch/bin/` and checks it against the handbook: every do sample lints clean, and every don't sample marked compiles is flagged under its own rule or listed in `UNDECIDED` in `scripts/lint.test.ts` with what a syntax tree cannot see. `check_samples.ts` compiles every sample and compares the result with its mark.
 
 ## misra-lint
 
-`tools/misra_lint.zig` decides the don't patterns a syntax tree can decide, with `std.zig.Ast` and no types. `zig run -ODebug tools/misra_lint.zig -- FILE...` prints `path:line:col: violation[check] Rule N.M: summary`; `--json` prints fields, `--checks` lists every check and its rules, `-` reads stdin. Exit 0 means no findings; 1 means findings (including review items and parse errors); 2 means a usage or read error. `// misra-lint: allow <check> <reason>`, in a comment on the finding's line or on the comment-only line immediately above it, silences that finding, and only with a reason. The per-file lint pass reports nesting deeper than 256 levels as `parse_error` instead of parsing it. The `--root` import pass reparses files without this guard; resolve parse errors before using `--root`. The checker follows this standard and lints itself clean. `--root ROOT FILE...` also reports each FILE the root does not reach through `@import`. `tools/std_lists.zig` (deprecated std declarations, and `std.posix` wrappers with an `=> unreachable` errno prong) is generated by `bun scripts/gen_std_lists.ts` from the installed std; regenerate it when Zig changes, and `bun test scripts/` fails while it is stale. Coverage, severities, and blind spots are in `docs/misra-lint.md`.
+`tools/misra_lint.zig` decides the don't patterns a syntax tree can decide, with `std.zig.Ast` and no types. `zig run -ODebug tools/misra_lint.zig -- FILE...` prints `path:line:col: severity[check] rules: summary (subject)`; `--json` prints the same findings as fields (`docs/misra-lint.md`), `--checks` lists every check and its rules, `--root` checks reachability (group 5), and `-` reads stdin. Exit 0 means no findings; 1 means findings (including review items and parse errors); 2 means a usage or read error. `// misra-lint: allow <check> <reason>`, in a comment on the finding's line or on the comment-only line immediately above it, silences that finding, and only with a reason. Resolve every `parse_error` before using `--root`: its import pass reparses files without the 256-level nesting guard. The checker follows this standard and lints itself clean. Regenerate `tools/std_lists.zig` (`bun scripts/gen_std_lists.ts`) when Zig changes. Coverage, severities, the nesting guard, and blind spots are in `docs/misra-lint.md`.
 
 ## Site
 
-`site/` is the handbook in a browser, set as a component datasheet. The front sheet carries the features, a description, a pin map with one pin per rule in group order, the compiler note last (an odd count leaves the last pin of the package NC), and the pin function table. Each rule sheet has its description, the do and the don't as figures, the evidence for each don't (rejected by the compiler, flagged by misra-lint, or left to a reader), and the misra-lint checks that decide it. "Evaluate a file" checks a whole file. Light and dark follow the OS; the bar's switch stores a choice. Keys: `/` find, `[` and `]` previous and next rule, `Ctrl`+`Enter` check in an editor.
+`site/` is the handbook in a browser, set as a component datasheet. The front sheet carries the features, a description, a pin map with one pin per rule in group order, the compiler note last (an odd count leaves the last pin of the package NC), and the pin function table. Each rule sheet has its description, the do and the don't as figures, the evidence for each don't (rejected by the compiler, flagged by misra-lint, or left to a reader), and the misra-lint checks that decide it. "Evaluate a file" checks a whole file. Light and dark follow the OS; the bar's switch stores a choice. Keys: `/` find, `[` and `]` previous and next rule, `Ctrl`+`Enter` (or `Cmd`+`Enter`) check in an editor.
 
 ```bash
 bun scripts/server.ts
@@ -278,9 +279,9 @@ Open `http://127.0.0.1:4173`. The process listens on localhost. `PORT` changes t
 
 Published copy: `bun scripts/build_site.ts` writes `build/site`, the static pages plus `handbook.json`, `rules.json`, `checks.json`, and an `api/health` that reports the checker unavailable. `bun --env-file=.secrets x wrangler deploy` publishes it as the Worker `misra-zig` on misra-zig.dev and misra-zig.com (`wrangler.jsonc`). `scripts/worker.ts` runs before the assets: a plain HTTP request gets a 301 to HTTPS, and every request counts against the Workers request quota. The zone setting "Always Use HTTPS" would make the Worker unnecessary, but the OAuth login cannot change zone settings. The published copy never runs a compiler: `POST /api/check` is a 404 there. `.secrets` holds `CLOUDFLARE_ACCOUNT_ID` only, mode 600 and gitignored. wrangler signs in with its OAuth login in `~/.config/.wrangler`, outside the repo, so no API token is stored in the project.
 
-`GET /rules.json` is the same rules as fields: `id`, `number`, `kind`, `group`, `obligation`, `do.zig`, `do.note`, and `dont.cases`. A case is `mark` (`rejected` or `compiles`), `why`, and `zig`. `zig` is empty when that don't has no sample. One rule may have several cases, with the same mark or different marks. The rule sheet shows the same id and marks. `GET /checks.json` is the misra-lint check list: `id`, `severity`, `rules`, `summary`. `/handbook.json` is the page model. `agentRules` in `scripts/handbook.ts` builds the fields from the handbook.
+`GET /rules.json` is the same rules as fields. The top level is `zig` (the version the handbook names), `source`, and `rules`; a rule is `id`, `number`, `kind`, `group`, `obligation`, `do.zig`, `do.note`, and `dont.cases`. `do.zig` is an array of sources. A case is `mark` (`rejected` or `compiles`), `why`, and `zig`; a case's `zig` is empty when that don't has no sample. One rule may have several cases, with the same mark or different marks. The rule sheet shows the same id and marks. `GET /checks.json` is the misra-lint check list: `id`, `severity`, `rules`, `summary`. `/handbook.json` is the page model. `agentRules` in `scripts/handbook.ts` builds the fields from the handbook.
 
-`DESIGN.md` records the datasheet world. `.impeccable/` holds its design sidecar; its review captures, local config, and caches stay out of git.
+`DESIGN.md` records the datasheet world. `.impeccable/` holds its design sidecar; its review captures, design question records, local config, and caches stay out of git.
 
 ## Skills
 
@@ -288,7 +289,7 @@ Published copy: `bun scripts/build_site.ts` writes `build/site`, the static page
 
 - `misra-zig-write`: write Zig under this standard, with the compliant form for each common task.
 - `misra-zig-review`: review Zig code against this standard. `bun scripts/review.ts FILE...` prints the skeleton: misra-lint findings by rule, then a checklist of every rule, split into rules no check decides and rules decided only in part.
-- `misra-zig-rule`: change a rule and keep the handbook, `compliant.zig`, `GROUP_DEFS`, the site, and the tests in step.
+- `misra-zig-rule`: change a rule and keep `AGENTS.md`, the handbook, `compliant.zig`, `docs/misra-c-2025.md`, `GROUP_DEFS`, misra-lint, and the tests in step.
 - `misra-lint-check`: add or fix a misra-lint check, test first.
 
 ## Decisions

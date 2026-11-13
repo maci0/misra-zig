@@ -26,7 +26,7 @@ so it reflects those files at the time of the run. Start the report from it.
 This command runs misra-lint; it does not compile the reviewed files or check
 import reachability. Exit 0 still requires the gates and reader pass below.
 
-## 2. Compiler gates
+## 2. Gates
 
 Run these in the project under review and keep each exit code:
 
@@ -66,29 +66,15 @@ about.
 ## 4. Reader pass
 
 Work through the checklist with the handbook open on each rule's don't. For the
-"only in part" rules, look for what the named checks miss. misra-lint has no
-types and sees one file, so it misses:
+"only in part" rules, look for what the named checks miss: read
+`$MZ/docs/misra-lint.md`, "Known blind spots" and the `UNDECIDED` list under
+"Coverage", first. Beyond those, look for:
 
-- names reached through an alias (`const heap = std.heap;` then
-  `heap.page_allocator`), or through a struct field holding an allocator;
-- recursion through methods (`self.walk()`) or another file;
-- widths it cannot see: `usize`, aliases, and inferred locals in arithmetic;
-- a check that guards a parameter but is not a comparison next to its name
-  (it accepts `if (n > len)`, not `if (!inRange(n))`), and a comparison that
-  is next to the name but is not the right guard (`if (n > 100)` before
-  `@intCast(n)` counts);
-- an `AssumeCapacity` reserve that is smaller than the appends, and a reserve
-  made by the caller;
-- a std call whose body asserts an argument (Dir 4.11), a float that can be
-  NaN (Dir 4.15), and a tagged union field read without a tag test
-  (Rule 19.3): all need types or the std source;
-- two functions that take the same two mutexes in opposite orders (Dir 5.2),
-  and an atomic ordering passed through a constant (Rule 21.25);
-- a pointer to a local stored first and returned later;
+- an allocator reached through a struct field;
+- an `AssumeCapacity` reserve made by the caller;
 - every trust boundary that is not an `export fn` (file bytes, sockets, parsed
   config) where `std.debug.assert`, `@intCast`, `@fromBackingInt`, a length
-  that sizes an allocation, or an index meets outside data;
-- everything across files: Rule 8.4 headers, Rule 8.7 `pub` use.
+  that sizes an allocation, or an index meets outside data.
 
 ## 5. Report
 

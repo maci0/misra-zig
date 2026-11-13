@@ -93,7 +93,7 @@ const GROUP_DEFS: Group[] = [
     },
     {
         title: "Memory and other resources",
-        blurb: "The allocator and the Io are parameters. Every allocation, file, and lock has one release path. Read errno before the next call.",
+        blurb: "The allocator and the Io are parameters. Every allocation, file, and lock has one release path. Read errno before the next call. End of file is an error, not a zero length.",
         ids: [
             "dir-4-12",
             "rule-21-3",
@@ -132,7 +132,7 @@ const GROUP_DEFS: Group[] = [
     },
     {
         title: "Buffers and strings",
-        blurb: "A length from outside is capped before it sizes anything. Text is a slice, pointer and length. A copy inside one buffer is @memmove. End of file is an error, not a zero length.",
+        blurb: "A length from outside is capped before it sizes anything. Text is a slice, pointer and length. A copy inside one buffer is @memmove.",
         ids: ["dir-4-14", "rule-19-1", "rule-21-17", "rule-21-18"],
     },
     {
@@ -142,7 +142,7 @@ const GROUP_DEFS: Group[] = [
     },
     {
         title: "Already rejected by the compiler",
-        blurb: "Narrowing, mixed signedness, null pointers, fallthrough, assignment inside a condition, partial initializers, and code after return are already compile errors.",
+        blurb: "Narrowing, mixed signedness that does not coerce, null pointers, fallthrough, assignment inside a condition, partial initializers, and code after return are already compile errors.",
         ids: ["compiler"],
     },
 ];

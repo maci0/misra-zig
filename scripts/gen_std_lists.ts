@@ -4,8 +4,8 @@ import { projectRoot, zigCommand } from "./check.ts";
 
 /**
  * Reads the installed Zig standard library and writes `tools/std_lists.zig`:
- * - `deprecated`: every top-level `pub` declaration whose doc comment says
- *   "Deprecated", with the replacement the comment names;
+ * - `deprecated`: every top-level `pub` declaration with a doc comment line that
+ *   matches `DEPRECATED_LINE`, with the replacement the comment names;
  * - `posix_assumes_errno`: every `std.posix` function with an errno prong that
  *   is `=> unreachable`, which is illegal behavior when the OS returns it.
  * `--check` compares instead of writing, and exits 1 when the file is stale.

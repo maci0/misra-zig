@@ -13,7 +13,7 @@ separately and must agree with it. Work from the repo root.
 
 | File | Owns |
 |---|---|
-| `AGENTS.md` | The rule set in seven groups, the cited MISRA ids per group, the compiler-rejected list, where a rule departs from the MISRA text |
+| `AGENTS.md` | The rule set in seven groups, the cited MISRA ids per group, the compiler-rejected list (kept in step with the handbook's "What the compiler already rejects"), where a rule departs from the MISRA text |
 | `docs/misra-zig-handbook.md` | Per rule: `### Rule N.M` or `### Dir N.M`, the obligation, `#### Do`, `#### Don't` |
 | `docs/misra-c-2025.md` | The status of every MISRA C:2025 guideline in Zig; ids are C:2025 numbers |
 | `docs/examples/compliant.zig` | Every do function, tested in Debug and ReleaseSafe |
@@ -35,9 +35,11 @@ written only after a run shows the panic.
 
 ## Handbook format
 
-- A don't sample is led by a paragraph that starts `**Rejected.**` (Zig 0.17
-  refuses it) or `**Compiles.**` (accepted and still wrong). A don't with no
-  sample is a lead paragraph alone, pointing at another rule.
+- A don't sample is led by a paragraph that starts `**Rejected` (Zig 0.17
+  refuses it) or `**Compiles` (accepted and still wrong), as in
+  `**Rejected.**` or `**Compiles, still the wrong width.**`. A don't with no
+  sample is a lead paragraph alone, which points at another rule or says why no
+  single file shows it.
 - A rejected sample is an `export fn` (an uncalled function is not analyzed).
   `handbook.test.ts` fails otherwise.
 - A do sample must compile inside `wrapSource` (`scripts/check.ts`). The
@@ -63,14 +65,14 @@ written only after a run shows the panic.
 5. A new `**Compiles**` don't must be flagged under its own rule. Add a check
    with the `misra-lint-check` skill, or add the sample to `UNDECIDED` with what
    a syntax tree cannot see.
-6. Run the full [canonical checks in AGENTS.md](../../AGENTS.md#checks),
-   including HTML and CSS validation with `vnu`. `check_samples.ts` compiles
-   every sample and compares the result with its mark.
-
+6. Run the full [canonical checks in AGENTS.md](../../AGENTS.md#checks).
+   `check_samples.ts` compiles every sample and compares the result with its
+   mark.
 7. Verify rule counts with `bun test scripts/handbook.test.ts`, check counts
-   with `misra-lint --checks`, and sample coverage with
-   `bun test scripts/lint.test.ts`. Update the coverage
-   in `docs/misra-lint.md` and any affected status claims in `README.md`. Never
+   with `zig run -ODebug tools/misra_lint.zig -- --checks`, and sample coverage
+   from the handbook marks and `UNDECIDED`, which `bun test scripts/lint.test.ts`
+   confirms. Update the coverage in
+   `docs/misra-lint.md` and any affected status claims in `README.md`. Never
    write a count from memory.
 8. Run `bun scripts/server.ts` and open `http://127.0.0.1:4173`. On the rule's
    sheet, check the marks, the evidence line on each don't, and the

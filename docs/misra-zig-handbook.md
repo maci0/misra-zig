@@ -2,7 +2,7 @@
 
 Zig 0.17.0 samples for rules inspired by MISRA C. The rules are the ones named in `AGENTS.md`, not the whole of MISRA C. The wording here is the Zig obligation, not the text of the C standard.
 
-The do blocks are the functions in `docs/examples/compliant.zig`. That file passes:
+The do blocks are tested in `docs/examples/compliant.zig`, as functions or, for a `main`, as a test body. That file passes:
 
 ```bash
 zig test -lc -ODebug docs/examples/compliant.zig
@@ -331,7 +331,7 @@ fn readConfigUnbounded(dir: std.Io.Dir, io: std.Io, gpa: std.mem.Allocator) ![]u
 
 ### Dir 4.15
 
-A float computed from outside data is checked with `std.math.isFinite` before it is stored, compared, or converted. A nonzero value divided by zero, or an overflow, gives an infinity, and `0.0 / 0.0` gives NaN. With a NaN operand, `==`, `<`, `<=`, `>`, and `>=` are false and `!=` is true, so a range check such as `x > limit` lets NaN through. `@setFloatMode(.optimized)` is not used: in that mode the compiler may assume no operand or result is NaN or infinite, and the language reference calls the result undefined. A float that becomes an integer also follows Rule 10.3.
+A float computed from outside data is checked with `std.math.isFinite` before it is stored, compared, or converted. A nonzero value divided by zero, or an overflow, gives an infinity, and `0.0 / 0.0` gives NaN. With a NaN operand, `==`, `<`, `<=`, `>`, and `>=` are false and `!=` is true, so a range check such as `x > limit` lets NaN through. A range check that NaN fails, `if (!(x >= lo and x < hi)) return error.OutOfRange;` with finite bounds, also rejects both infinities and counts as the `isFinite` check. `@setFloatMode(.optimized)` is not used: in that mode the compiler may assume no operand or result is NaN or infinite, and the language reference calls the result undefined. A float that becomes an integer also follows Rule 10.3.
 
 #### Do
 
@@ -490,7 +490,7 @@ fn handle(conn: u32) void {
 
 ### Rule 1.5
 
-A declaration the Zig 0.17 standard library marks deprecated is not used. misra-lint reports a use of a top-level `pub` declaration whose doc comment marks it deprecated, from a list generated out of the installed std (`tools/std_lists.zig`). A deprecated method inside a type is not listed (`docs/misra-lint.md`).
+A declaration the Zig 0.17 standard library marks deprecated is not used. misra-lint reports a use of a top-level `pub` declaration whose doc comment marks it deprecated, from a list generated out of the installed std (`tools/std_lists.zig`). A method of a nested type, or one called through a value, is not seen (`docs/misra-lint.md`).
 
 #### Do
 
@@ -512,7 +512,7 @@ fn colonOld(s: []const u8) ?usize {
 
 ### Rule 2.1
 
-Every source file is reachable from the test root through `@import`. Zig analyzes only what is referenced, so a file nothing imports is never type-checked. `misra-lint --root ROOT FILE...` reports each FILE the root does not reach.
+Every source file is reachable from the test root through `@import`. Zig analyzes only what is referenced, so a file nothing imports is never type-checked. misra-lint's `--root ROOT FILE...` (`docs/misra-lint.md`) reports each FILE the root does not reach; FILE... lists ROOT and every intermediate import too.
 
 #### Do
 
@@ -913,7 +913,7 @@ export fn f(a: i32, b: u32) u32 {
 
 ### Rule 10.5
 
-A `bool` stays a `bool`. An `enum` stays an `enum` until the bytes hit the wire. `@backingInt` is that boundary, and the result is not fed back into arithmetic to mean "the next tag". The way back from the wire is `std.enums.fromInt`, which returns null for a value with no tag. `@fromBackingInt` of such a value is illegal behavior; `zig fmt` rewrites the older `@enumFromInt` to it. A non-exhaustive enum (`_`) accepts every value of its backing type, so `fromInt` never returns null for it and the `switch` handles the unknown values with a `_` prong.
+A `bool` stays a `bool`. An `enum` stays an `enum` until the bytes hit the wire. `@backingInt` is that boundary, and the result is not fed back into arithmetic to mean "the next tag". The way back from the wire is `std.enums.fromInt`, which returns null for a value with no tag. `@fromBackingInt` of such a value is illegal behavior; `zig fmt` rewrites the older `@enumFromInt(x)` to `@fromBackingInt(@intCast(x))`, and that `@intCast` needs its own check. A non-exhaustive enum (`_`) accepts every value of its backing type, so `fromInt` never returns null for it and the `switch` handles the unknown values with a `_` prong.
 
 #### Do
 
@@ -1124,7 +1124,7 @@ fn nonEmpty(n: u32) bool {
 }
 ```
 
-An optional unwrap is a condition of optional type, which is the Zig form of a null test:
+Unwrapping an optional, with `if (p) |s|` or with `orelse`, is the Zig form of a null test:
 
 ```zig
 fn lenOf(p: ?[]const u8) usize {
@@ -1242,7 +1242,7 @@ fn opcodeName(code: u8) error{Unknown}![]const u8 {
 }
 ```
 
-`nameOf` has no `else` because `Color` is exhaustive. Adding a tag and forgetting a prong is **rejected**.
+`nameOf` (Rule 16.3) has no `else` because `Color` is exhaustive. Adding a tag and forgetting a prong is **rejected**.
 
 #### Don't
 
@@ -1350,7 +1350,7 @@ fn walk(node: *const Node) void {
 
 ### Rule 18.4
 
-`+` and `-` do not take a many-item or C pointer (`[*]T`, `[*c]T`). A many-item pointer has no length, so nothing checks where the result points, in any build mode. The function that learns the length slices the pointer once, checks the length, and indexes the slice. `<` and `>` between two pointers do not compile.
+`+` and `-` do not take a many-item or C pointer (`[*]T`, `[*c]T`). A many-item pointer has no length, so nothing checks where the result points, in any build mode. The function that learns the length slices the pointer once, checks the length, and indexes the slice. `<` and `>` between two `*T` or `[*]T` pointers do not compile; between two `[*c]T` they do.
 
 #### Do
 
@@ -1499,7 +1499,7 @@ fn grow(allocator: std.mem.Allocator) ![]u32 {
 }
 ```
 
-`std.ArrayList` in 0.17 does not store the allocator. Pass the same one to every method and to `deinit`.
+`std.ArrayList` in 0.17 does not store the allocator. Pass the same one to every method that takes an allocator and to `deinit`.
 
 #### Don't
 
@@ -1590,7 +1590,7 @@ fn terminate(buf: []u8) void {
 
 ### Rule 21.18
 
-The length passed to a copy is the length of the smaller object, and it is checked against both sides. `@memcpy` will accept any `n` you slice to. The check is yours, because ReleaseFast does not bounds-check.
+The length passed to a copy is no greater than either object's length, and it is checked against both sides. `@memcpy` will accept any `n` you slice to. The check is yours, because ReleaseFast does not bounds-check.
 
 #### Do
 
@@ -1608,7 +1608,7 @@ fn copyN(dest: []u8, src: []const u8, n: usize) void {
 
 ### Rule 21.25
 
-Every atomic operation uses `.seq_cst`: the `std.atomic.Value` methods (`load`, `store`, `swap`, `fetchAdd`, `cmpxchgStrong`, and the rest) and the `@atomicLoad`, `@atomicStore`, `@atomicRmw`, and `@cmpxchg` builtins. A weaker order (`.acquire`, `.release`, `.acq_rel`, `.monotonic`, `.unordered`) is correct only with a proof about every other access to the same data.
+Every atomic operation uses `.seq_cst`: the `std.atomic.Value` methods (`load`, `store`, `swap`, `fetchAdd`, `cmpxchgStrong`, and the rest) and the `@atomicLoad`, `@atomicStore`, `@atomicRmw`, `@cmpxchgWeak`, and `@cmpxchgStrong` builtins. A weaker order (`.acquire`, `.release`, `.acq_rel`, `.monotonic`, `.unordered`) is not used: it is correct only with a proof about every other access to the same data.
 
 #### Do
 
@@ -1910,4 +1910,6 @@ The bare form of each of these does not compile on Zig 0.17.0. Some still have a
 - A non-void function that can reach its closing brace, and a `noreturn` function that returns.
 - An assignment to a parameter. Parameters are constant.
 - A string literal assigned to `[]u8`, and a declaration named after a primitive type, such as `const u8 = 1`.
-- `<` or `>` between two pointers.
+- `<` or `>` between two `*T` or `[*]T` pointers. A `[*c]T` still compares, and stays in the file that talks to C.
+
+The types also close two C hazards: `allocator.alloc` returns `error.OutOfMemory`, never a null pointer, and a slice carries its length.

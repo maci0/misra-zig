@@ -26,10 +26,9 @@ The page is the handbook. The sample is source the reader can change. The checke
 
 ## Operating Context
 
-The local server requires Linux, Bun, Zig 0.17.0, and `prlimit` from
-util-linux. Zig is on `PATH` or selected with `ZIG`. The server listens on
-`127.0.0.1`. The published sites, misra-zig.dev and misra-zig.com, serve the
-static handbook; Check runs only on the local server.
+Requirements and the published URLs are in [README.md](README.md#run-it). The
+server listens on `127.0.0.1`; the published copy is static, and Check runs
+only on the local server.
 
 ## Capabilities and Constraints
 

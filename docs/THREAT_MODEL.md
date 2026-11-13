@@ -14,9 +14,9 @@ site).
 |---|------|-------|
 | R1 | Anyone who can open a TCP connection to the listen port can POST a compile. The server has no authentication. | Bound to `127.0.0.1`. A request whose `Host` is not `127.0.0.1:PORT` or `localhost:PORT` gets 421 before any compile, including a DNS-rebinding `Host`. |
 | R2 | `zig test --test-no-exec` analyzes the sample as the user who started the server. It does not execute the sample's tests. There is no OS sandbox: the scratch directory is a working directory and a cache, not a confinement boundary. | Zig rejects imports and embedded files outside the module path in the probes below. This is a compiler restriction, not OS isolation. |
-| R3 | Compile requests are queued with no depth limit (`oneAtATime`) and share persistent caches under `.scratch/site-check/` with no size cap. Each temporary source directory is removed after compilation. | One compile at a time. Body 256 KiB, source 64 KiB of UTF-8. |
+| R3 | Compile requests are queued with no depth limit (`oneAtATime`) and share persistent caches under `.scratch/site-check/` with no size cap. Each temporary source directory is removed after compilation. misra-lint runs are not queued. | One compile at a time; each lint run stops at 10 s. Body 256 KiB, source 64 KiB of UTF-8. |
 | R4 | The published Worker runs before static assets (`run_worker_first: true`), so every request counts against the Workers request quota. There is no rate limit in this repo. | A full quota stops the public handbook. The Worker does not compile. |
-| R5 | `/api/health` returns `lintProblem`, the misra-lint build failure text, which the page displays in its feature list and when a Check has no lint findings available. Compiler output is rewritten toward `sample.zig` and then clipped, and a failed `Bun.spawn` returns `err.message` to the client. | A 500 from the fetch handler is a fixed sentence. The build failure and the spawn error are not. |
+| R5 | `/api/health` returns `lintProblem`, the misra-lint build failure text, which the page displays in its feature list and when a Check has no lint findings available. Compiler output has the sample path replaced by `sample.zig` and is then clipped, and a failed `Bun.spawn` returns `err.message` to the client. | A 500 from the fetch handler is a fixed sentence. The build failure and the spawn error are not. |
 | R6 | `build/site/` is whatever `scripts/build_site.ts` wrote. The Worker serves those bytes. | A bad build is what readers copy, and what `rules.json` and `checks.json` tell tools. |
 
 When `scripts/server.ts`, `scripts/check.ts`, `scripts/lint.ts`,
@@ -37,14 +37,13 @@ process throws before it listens.
   and misra-lint (`lintSample`).
 - `POST /api/lint`: misra-lint only.
 
-Every request checks `Host` against `127.0.0.1:PORT` and `localhost:PORT`
-and returns 421 on a mismatch. A POST then checks `Origin`, only when the
-header is present (403 unless it is `http://127.0.0.1:PORT` or
-`http://localhost:PORT`), followed by `Content-Type` starting with
-`application/json` (415). A POST with no
-`Origin` is not refused by the origin check. The body cap is
-`maxRequestBodySize` 256 KiB (413). The source cap is `MAX_SOURCE_BYTES`
-(64 KiB of UTF-8).
+Every request checks `Host` against `127.0.0.1:PORT` and `localhost:PORT` and
+returns 421 on a mismatch. A POST then checks `Origin`, only when the header is
+present (403 unless it is `http://127.0.0.1:PORT` or `http://localhost:PORT`),
+followed by `Content-Type` starting with `application/json` (415). A POST with
+no `Origin` is not refused by the origin check. The body cap is
+`maxRequestBodySize` 256 KiB (413). The source cap is `MAX_SOURCE_BYTES` (64
+KiB of UTF-8).
 
 **Published site.** `wrangler.jsonc` serves `build/site/` through
 `scripts/worker.ts` on misra-zig.dev and misra-zig.com. `build_site.ts`
@@ -54,7 +53,8 @@ Static assets answer an unknown path with their own 404.
 
 **CLI, not a listener.** `tools/misra_lint.zig`, `scripts/check_samples.ts`,
 `scripts/review.ts`, `scripts/gen_std_lists.ts`, and `scripts/build_site.ts`
-read paths the developer passed and files in the repo.
+read paths the developer passed and files in the repo; `gen_std_lists.ts` also
+reads the installed std (`std_dir` from `zig env`).
 
 **Environment.** `PORT` (`scripts/server.ts`), `ZIG` (`zigCommand` in
 `scripts/check.ts`), `MISRA_ZIG_COMPILE_LIMIT` (`compileLimitFromEnv`:
@@ -85,24 +85,25 @@ Each submitted compile is started under `prlimit --as=`
 at `compileLimit` (default 4 GiB). The server refuses to start when
 `prlimit` is not on `PATH`. The warm-up calls `checkSource` with no memory
 limit so the first libc build can finish; that call still uses the 60 s
-timeout (`ZIG_TIMEOUT_MS`). A killed compile is reported as
-"Zig did not finish within 60 seconds." An over-cap compile is reported as
-stopped under the memory limit.
+timeout (`ZIG_TIMEOUT_MS`). Any compile that ends by SIGKILL, from the timeout
+or from another source such as the kernel OOM killer, is reported as "Zig did
+not finish within 60 seconds." A capped compile that aborts, segfaults, or
+prints `error: OutOfMemory` is reported as stopped under the memory limit.
 
-`readCapped` keeps 12,000 bytes of stdout and 12,000 of stderr. `clip`
-then keeps `OUTPUT_LIMIT` (12,000) UTF-16 code units of the joined text,
-after stripping ANSI and trimming. That is a string-length cap, not a
-12 KiB byte cap. `present` replaces the sample path with `sample.zig`.
+`readCapped` keeps 12,000 bytes of stdout and 12,000 of stderr. `present`
+replaces the sample path with `sample.zig`, then `clip` keeps `OUTPUT_LIMIT`
+(12,000) UTF-16 code units of the joined text, after stripping ANSI and
+trimming. That is a string-length cap, not a 12 KiB byte cap.
 
 misra-lint is built once at start into `.scratch/bin`, written to a temp
 name and `rename`d into place (`buildLint`). A lint run times out at 10 s.
 A build failure is stored in `lintProblem`, returned by `/api/health`, and
 displayed in the front-sheet feature list and Check results when lint is
-unavailable (`site/site.js`). Check still runs the compiler when the lint binary is missing; `findings`
-is then null.
+unavailable (`site/site.js`). Check still runs the compiler when the lint
+binary is missing; `findings` is then null.
 
 `site/site.js` posts JSON and inserts compiler output through `escapeHtml`.
-The body size, source size, `Host`, and content type are also enforced in
+The body size, source size, `Host`, and content type are enforced only in
 `scripts/server.ts`.
 
 ## Published site and deploy

@@ -60,7 +60,7 @@ const MAX_BODY_BYTES = 256 * 1024;
 
 // Only this machine's own page may use the API. A Host check stops DNS rebinding,
 // an Origin check stops other sites, and the JSON content type forces a CORS
-// preflight that this server never answers.
+// preflight that this server never approves.
 const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
 const allowedOrigins = new Set([...allowedHosts].map((host) => `http://${host}`));
 

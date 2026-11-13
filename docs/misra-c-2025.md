@@ -14,7 +14,7 @@ A guideline is adopted when Zig compiles the hazard it targets and the result is
 | process | A project activity, not a property of the code. |
 | not assessed | Compiles, and the behavior the guideline is about is not stated in the 0.17.0 language reference. |
 
-Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no counterpart, 27 are left out, 1 is process, and 2 are not assessed.
+Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 78 have no counterpart, 30 are left out, 1 is process, and 2 are not assessed.
 
 ## Directives
 
@@ -108,7 +108,7 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 | Rule 8.19 | external declarations in source files | covered | Rule 8.4: a handwritten `extern fn` is reported. |
 | Rule 9.1 | read before set | adopted | |
 | Rule 9.2 | initializer braces | adopted | Departs: every field and element is written. |
-| Rule 9.3 | partial array initialization | rejected | |
+| Rule 9.3 | partial array initialization | rejected | A short array literal is rejected; Rule 9.2 asks for every struct field to be written too. |
 | Rule 9.4 | an element initialized twice | rejected | A field named twice in one literal. |
 | Rule 9.5 | designated array initializers | no counterpart | |
 | Rule 9.6 | chained designators | no counterpart | |
@@ -158,7 +158,7 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 | Rule 16.4 | a default clause | adopted | |
 | Rule 16.5 | default first or last | left out | Where `else` sits does not change which prong runs. |
 | Rule 16.6 | at least two clauses | left out | A one-prong `switch` compiles and is an ordinary expression. |
-| Rule 16.7 | `switch` on a Boolean | left out | Compiles, and must list both values. |
+| Rule 16.7 | `switch` on a Boolean | left out | Compiles, and must cover both values, by name or through `else`. |
 | Rule 17.1 | variadic functions | adopted | `@cVaStart`. |
 | Rule 17.2 | recursion | adopted | |
 | Rule 17.3 | implicit declarations | rejected | |
@@ -173,7 +173,7 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 | Rule 17.13 | qualified function types | no counterpart | |
 | Rule 18.1 | arithmetic past an array | covered | Rule 18.4. |
 | Rule 18.2 | subtracting pointers into different arrays | covered | Rule 18.4: `q - p` on many-item pointers compiles. |
-| Rule 18.3 | ordering pointers | rejected | `<` between two pointers. |
+| Rule 18.3 | ordering pointers | rejected | `<` between two `*T` or `[*]T` pointers. `[*c]T` still compares, and stays in the file that talks to C. |
 | Rule 18.4 | `+` and `-` on pointers | adopted | |
 | Rule 18.5 | deep pointer nesting | left out | Readability. |
 | Rule 18.6 | addresses that outlive their object | adopted | |
@@ -195,7 +195,7 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 | Rule 21.5 | `<signal.h>` | left out | `std.posix.sigaction` compiles. State a handler shares with other code is Dir 5.1. |
 | Rule 21.6 | `<stdio.h>` | no counterpart | `std.Io` returns errors instead of `EOF` and `errno`. |
 | Rule 21.7 | `atoi` and friends | no counterpart | `std.fmt.parseInt` returns an error for bad input or overflow. |
-| Rule 21.8 | `abort`, `exit`, `getenv`, `system` | adopted | The termination part. Reading the environment and running a shell are left out. |
+| Rule 21.8 | `abort`, `exit`, `getenv`, `system` | adopted | Departs: the termination part only. Reading the environment and running a shell are left out. |
 | Rule 21.9 | `bsearch` and `qsort` | no counterpart | `std.sort` is typed. |
 | Rule 21.10 | time functions | no counterpart | |
 | Rule 21.11 | `<tgmath.h>` | no counterpart | |
@@ -206,9 +206,9 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 | Rule 21.16 | `memcmp` argument types | no counterpart | |
 | Rule 21.17 | string functions past the bounds | adopted | |
 | Rule 21.18 | `size_t` arguments | adopted | |
-| Rule 21.19 | pointers from `localeconv` and friends | no counterpart | Applies as written when calling libc. |
-| Rule 21.20 | pointers from `getenv` and friends | no counterpart | Applies as written when calling libc. |
-| Rule 21.21 | `system` | no counterpart | |
+| Rule 21.19 | pointers from `localeconv` and friends | left out | Applies as written when calling libc. |
+| Rule 21.20 | pointers from `getenv` and friends | left out | Applies as written when calling libc (`std.c.getenv`). |
+| Rule 21.21 | `system` | left out | The std has no `system`; calling libc's is left out with Rule 21.8. |
 | Rule 21.22 | `<tgmath.h>` argument types | no counterpart | |
 | Rule 21.23 | `<tgmath.h>` argument agreement | no counterpart | |
 | Rule 21.24 | `rand` | left out | Choosing a random source is a security decision, outside this standard. |
@@ -232,4 +232,4 @@ Of the 223 guidelines, 59 are adopted, 23 covered, 30 rejected, 81 have no count
 - The guideline list: [Perforce QAC, MISRA C:2025 enforcement](https://help.perforce.com/qac/enforcement/doc/MISRA_MC25CM.pdf).
 - What changed from C:2023: [MISRA C:2025, a closer look](https://www.qt.io/software-insights/misra-c2025-a-closer-look-at-some-of-the-changes), [Perforce](https://www.perforce.com/blog/sca/misra-c-2025), [LDRA](https://ldra.com/ldra-blog/misra-c-2025-the-whys-and-wherefores-of-whats-new/).
 - MISRA's own assessment for another language: [MISRA C:2025 Addendum 6, Rust applicability](https://misra.org.uk/app/uploads/2025/03/MISRA-C-2025-ADD6.pdf).
-- Zig behavior: the 0.17.0 language reference shipped with the compiler, and the probes recorded in `docs/adr/002-misra-c-2025.md`.
+- Zig behavior: the 0.17.0 language reference shipped with the compiler, and the probe results summarized in `docs/adr/002-misra-c-2025.md` (the probe files are not kept).

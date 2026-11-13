@@ -4,7 +4,7 @@
 //! marks as a don't. It has no types and no data flow, so a clean run is not compliance:
 //! the rules it cannot decide still need a reader. `--checks` lists what it decides.
 //!
-//! A finding is silenced by a comment on its line or the line above:
+//! A finding is silenced by a comment on its line or on the comment-only line above:
 //! `// misra-lint: allow <check> <reason>`. The reason is required.
 
 const std = @import("std");
@@ -462,7 +462,8 @@ const Finding = struct {
     line: usize,
     /// 1-based, in bytes.
     column: usize,
-    /// The name the finding is about, or the parse error text. Lives as long as the arena.
+    /// The name the finding is about, or the parse error text. May borrow the source text or
+    /// the root path; valid while those and the arena live.
     subject: []const u8,
 };
 
@@ -541,7 +542,8 @@ const LockCall = struct {
     frees_at: ?TokenIndex,
 };
 
-/// Lints one file. Every finding and subject lives in `arena`.
+/// Lints one file. Every finding lives in `arena`; a subject may borrow `source`,
+/// which must outlive the findings.
 fn lint(arena: Allocator, source: [:0]const u8) Allocator.Error![]Finding {
     if (tooDeep(source)) |offset| {
         const findings = try arena.alloc(Finding, 1);
@@ -799,7 +801,7 @@ fn fieldName(l: *const Linter, node: Node.Index) ?[]const u8 {
 fn builtinName(l: *const Linter, node: Node.Index) ?[]const u8 {
     return switch (l.tag(node)) {
         .builtin_call_two, .builtin_call_two_comma, .builtin_call, .builtin_call_comma => l.text(l.tree.nodeMainToken(node)),
-        // misra-lint: allow enum_else std.zig.Ast.Node.Tag has about 200 std-owned tags; only the builtin call tags apply
+        // misra-lint: allow enum_else std.zig.Ast.Node.Tag has more than 100 std-owned tags; only the builtin call tags apply
         else => null,
     };
 }
@@ -893,11 +895,12 @@ fn opClass(tag: Node.Tag) OpClass {
     };
 }
 
-/// The operations whose result is undefined when it does not fit.
+/// `+`, `-`, and `*`, whose overflow is illegal behavior, and `<<`, which drops the bits
+/// shifted past the width: each result is only as wide as its operands.
 fn isTrappingArith(tag: Node.Tag) bool {
     return switch (tag) {
         .add, .sub, .mul, .shl => true,
-        // misra-lint: allow enum_else std.zig.Ast.Node.Tag is std-owned; only the listed tags trap on overflow
+        // misra-lint: allow enum_else std.zig.Ast.Node.Tag is std-owned; only the listed tags lose a result that does not fit
         else => false,
     };
 }
@@ -942,7 +945,7 @@ fn identType(l: *const Linter, f: Fn, name: []const u8) ?IntType {
     return null;
 }
 
-/// The width a trapping `+`, `-`, `*`, or `<<` runs at, when every operand is a
+/// The width a `+`, `-`, `*`, or `<<` runs at, when every operand is a
 /// typed name or a literal and the typed names agree.
 fn arithType(l: *const Linter, node: Node.Index) ?IntType {
     if (!isTrappingArith(l.tag(node))) return null;
@@ -1921,7 +1924,6 @@ fn lintStatements(l: *Linter, statements: []const Node.Index) Allocator.Error!vo
     }
 }
 
-/// True for `try dir.openFile(...)` whose options do not ask for writing.
 /// True when any name in the call's receiver chain (`l.arena.alloc`, `arena.alloc`) contains "arena".
 fn namesArena(l: *const Linter, callee: Node.Index) bool {
     var t = l.tree.firstToken(callee);
@@ -1932,6 +1934,7 @@ fn namesArena(l: *const Linter, callee: Node.Index) bool {
     return false;
 }
 
+/// True for `try dir.openFile(...)` whose options do not ask for writing.
 fn opensReadOnly(l: *const Linter, init: Node.Index) bool {
     if (l.tag(init) != .@"try") return false;
     var buf: [1]Node.Index = undefined;
@@ -2117,8 +2120,9 @@ fn lintRecursion(l: *Linter) Allocator.Error!void {
     }
 }
 
-/// True when every parameter of `f` is `comptime`, so a call runs at compile time,
-/// the way a helper that sizes a type does.
+/// True when every parameter of `f` is `comptime`, as in a helper that sizes a type.
+/// The recursion check skips such a function, although a call to it can still run at
+/// run time.
 fn comptimeOnly(l: *const Linter, f: Fn) bool {
     var buf: [1]Node.Index = undefined;
     const proto = l.tree.fullFnProto(&buf, f.decl) orelse return false;
@@ -2137,8 +2141,8 @@ fn returnsType(l: *const Linter, f: Fn) bool {
     return isIdent(l, ret, "type");
 }
 
-/// True when a path of one or more edges leads from `start` back to `start`.
 // ponytail: one walk per function, O(fns * edges). Tarjan's SCC is the upgrade for files with thousands of calls.
+/// True when a path of one or more edges leads from `start` back to `start`.
 /// `seen` and `stack` are scratch space with room for every function; each walk resets them.
 fn reaches(edges: []const Edge, seen: []bool, stack: *std.ArrayList(usize), start: usize) bool {
     @memset(seen, false);
