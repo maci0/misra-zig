@@ -85,10 +85,11 @@ Each submitted compile is started under `prlimit --as=`
 at `compileLimit` (default 4 GiB). The server refuses to start when
 `prlimit` is not on `PATH`. The warm-up calls `checkSource` with no memory
 limit so the first libc build can finish; that call still uses the 60 s
-timeout (`ZIG_TIMEOUT_MS`). Any compile that ends by SIGKILL, from the timeout
-or from another source such as the kernel OOM killer, is reported as "Zig did
-not finish within 60 seconds." A capped compile that aborts, segfaults, or
-prints `error: OutOfMemory` is reported as stopped under the memory limit.
+timeout (`ZIG_TIMEOUT_MS`). A SIGKILL at or after that deadline is reported as
+"Zig did not finish within 60 seconds." A capped compile that ends on a signal,
+exits 134 or 139, or prints `error: OutOfMemory` is reported as stopped under
+the memory limit. An uncapped compile that ends on a signal before the deadline
+is reported as stopped by that signal.
 
 `readCapped` keeps 12,000 bytes of stdout and 12,000 of stderr. `present`
 replaces the sample path with `sample.zig`, then `clip` keeps `OUTPUT_LIMIT`

@@ -193,18 +193,16 @@ Bun.serve({
         if (!file || !existsSync(file) || !statSync(file).isFile()) {
             return new Response("Not found.", { status: 404 });
         }
-        let body: unknown;
+        let bytes: Uint8Array;
         try {
-            body = Bun.file(file);
-            // Bun.file is lazy; reading catches a file deleted after the stat above.
-            await (body as { text(): Promise<string> }).text().then((text) => {
-                body = new Response(text, { headers: { "content-type": contentType(file), ...fresh } });
-            });
+            // Read now, as bytes: a lazy Bun.file would fail after the response starts if the
+            // file is deleted after the stat above, and text() would re-encode binary fonts.
+            bytes = await Bun.file(file).bytes();
         } catch (err) {
             console.error(err instanceof Error ? err.message : err);
             return new Response("Not found.", { status: 404 });
         }
-        return body as Response;
+        return new Response(bytes, { headers: { "content-type": contentType(file), ...fresh } });
     },
 });
 

@@ -113,3 +113,13 @@ test("a body over the limit is refused", async () => {
     const res = await post("/api/check", { "content-type": "application/json" }, huge);
     expect(res.status).toBe(413);
 });
+
+test("binary site files are served byte for byte", async () => {
+    for (const path of ["/fonts/Archivo.woff2", "/fonts/Hack-Regular.ttf"]) {
+        const res = await fetch(`${base}${path}`);
+        expect(res.status).toBe(200);
+        const sent = new Uint8Array(await res.arrayBuffer());
+        const disk = await Bun.file(join(root, "site", path)).bytes();
+        expect({ path, equal: Bun.deepEquals(sent, disk) }).toEqual({ path, equal: true });
+    }
+});

@@ -308,6 +308,7 @@ export async function checkSource(root: string, source: string, memoryLimit: num
     try {
         // prlimit is an external process because Bun.spawn has no rlimit option.
         const cap = memoryLimit === null ? [] : ["prlimit", `--as=${memoryLimit}`, "--"];
+        const started = performance.now();
         const proc = Bun.spawn({
             cmd: [
                 ...cap,
@@ -332,7 +333,9 @@ export async function checkSource(root: string, source: string, memoryLimit: num
         });
         const [out, err] = await Promise.all([readCapped(proc.stdout, OUTPUT_LIMIT), readCapped(proc.stderr, OUTPUT_LIMIT)]);
         const code = await proc.exited;
-        if (proc.signalCode === "SIGKILL") {
+        // A SIGKILL is the timeout only once the deadline has passed; earlier it came from
+        // elsewhere, such as the kernel OOM killer.
+        if (proc.signalCode === "SIGKILL" && performance.now() - started >= ZIG_TIMEOUT_MS) {
             return { status: "failed", output: "Zig did not finish within 60 seconds.", errors: [] };
         }
         // Under the cap Zig either crashes (abort, segfault) or reports `error: OutOfMemory`.
@@ -340,6 +343,9 @@ export async function checkSource(root: string, source: string, memoryLimit: num
         if (memoryLimit !== null && (proc.signalCode !== null || code === 134 || code === 139 || outOfMemory)) {
             const gib = (memoryLimit / 1024 ** 3).toFixed(1);
             return { status: "failed", output: `Zig stopped under the ${gib} GiB compile memory limit (exit ${code ?? proc.signalCode}).`, errors: [] };
+        }
+        if (proc.signalCode !== null) {
+            return { status: "failed", output: `Zig was stopped by ${proc.signalCode} before it finished.`, errors: [] };
         }
         const output = clip(present(`${out.text}${err.text}`, file)) + (out.cut || err.cut ? "\n…" : "");
         if (code === 0) {

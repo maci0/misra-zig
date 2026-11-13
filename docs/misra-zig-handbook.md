@@ -512,7 +512,7 @@ fn colonOld(s: []const u8) ?usize {
 
 ### Rule 2.1
 
-Every source file is reachable from the test root through `@import`. Zig analyzes only what is referenced, so a file nothing imports is never type-checked. misra-lint's `--root ROOT FILE...` (`docs/misra-lint.md`) reports each FILE the root does not reach; FILE... lists ROOT and every intermediate import too.
+Every source file is reachable from the test root through `@import`. Zig analyzes only what is referenced, so a file nothing imports is never type-checked. misra-lint's `--root ROOT FILE...` (`docs/misra-lint.md`) reports each FILE the root does not reach; FILE... lists every intermediate import too.
 
 #### Do
 

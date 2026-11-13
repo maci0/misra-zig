@@ -149,6 +149,24 @@ test("a compile over the memory limit is stopped and reported", async () => {
     expect(result.output).toContain("compile memory limit");
 }, 300_000);
 
+test("a compile killed before the timeout is not reported as a timeout", async () => {
+    const dir = join(root, ".scratch", "kill-test");
+    mkdirSync(dir, { recursive: true });
+    const fake = join(dir, "zig");
+    writeFileSync(fake, "#!/bin/sh\nkill -9 $$\n", { mode: 0o755 });
+    const saved = process.env.ZIG;
+    process.env.ZIG = fake;
+    try {
+        const result = await checkSource(root, "fn f() void {}\n");
+        expect(result.status).toBe("failed");
+        expect(result.output).not.toContain("60 seconds");
+        expect(result.output).toContain("SIGKILL");
+    } finally {
+        if (saved === undefined) delete process.env.ZIG;
+        else process.env.ZIG = saved;
+    }
+});
+
 test("the compile limit setting is validated", () => {
     expect(compileLimitFromEnv(undefined)).toBe(4 * 1024 ** 3);
     expect(compileLimitFromEnv("2G")).toBe(2 * 1024 ** 3);
@@ -171,6 +189,20 @@ test("--root reports a file the root does not reach through @import", async () =
     expect(await proc.exited).toBe(1);
     expect(out.trim().split("\n")).toEqual([
         "src/orphan.zig:1:1: violation[unreachable_file] Rule 2.1: The root does not reach this file through @import, so the compiler never analyzes it. (src/main.zig)",
+    ]);
+});
+
+test("--root follows the root's imports when the root is not in the file list", async () => {
+    const dir = join(root, ".scratch", "root-test", "only");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "main.zig"), 'test {\n    _ = @import("used.zig");\n}\n');
+    writeFileSync(join(dir, "used.zig"), "const x: u32 = 1;\n");
+    writeFileSync(join(dir, "orphan.zig"), "const y: u32 = 2;\n");
+    const proc = Bun.spawn({ cmd: [bin, "--root", "main.zig", "used.zig", "orphan.zig"], cwd: dir, stdout: "pipe", stderr: "pipe" });
+    const out = await new Response(proc.stdout).text();
+    expect(await proc.exited).toBe(1);
+    expect(out.trim().split("\n")).toEqual([
+        "orphan.zig:1:1: violation[unreachable_file] Rule 2.1: The root does not reach this file through @import, so the compiler never analyzes it. (main.zig)",
     ]);
 });
 

@@ -62,8 +62,9 @@ call names no type in the syntax tree.
 
 `--root ROOT FILE...` follows literal `@import("x.zig")` paths, resolving each
 against the importing file's directory. It reports each supplied FILE it does
-not reach (`unreachable_file`, Rule 2.1). Include ROOT and every intermediate
-imported file in FILE...: the checker does not load missing files. Computed
+not reach (`unreachable_file`, Rule 2.1). ROOT is read and linted even when
+FILE... leaves it out. Include every intermediate imported file in FILE...: the
+checker does not load other missing files. Computed
 imports and named modules are not followed. Reachability does not prove every
 declaration was analyzed; Zig also requires declarations to be referenced.
 

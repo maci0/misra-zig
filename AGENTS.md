@@ -177,7 +177,7 @@ No runtime recursion. A tree or a chain is a loop, an explicit stack with a fixe
 
 MISRA Rule 2.1, Rule 12.1, Rule 13.4, Rule 14.4, Rule 15.1, Rule 16.3, Rule 16.4.
 
-Every source file is reachable from the test root through `@import`; Zig analyzes only what is referenced. `zig run -ODebug tools/misra_lint.zig -- --root ROOT FILE...` reports a FILE the root does not reach; list ROOT and every intermediate import in FILE... too.
+Every source file is reachable from the test root through `@import`; Zig analyzes only what is referenced. `zig run -ODebug tools/misra_lint.zig -- --root ROOT FILE...` reports a FILE the root does not reach; list every intermediate import in FILE... too.
 
 `if` and `while` take a `bool`, an optional, or an error union. They do not take an integer. `for` walks a slice, an array, or a range. A bare integer is not one of those.
 
@@ -259,7 +259,7 @@ vnu --format text site/index.html
 vnu --css --format text site/site.css
 ```
 
-Run these with Zig 0.17.0 as `zig` on `PATH`: `tools/std_lists.zig` names the version it was generated from, so `bun test scripts/` fails under any other release. The Bun scripts run `ZIG` when it is set, else `zig` on `PATH`. There is no `build.zig`. `zig test` needs the file. `-lc` is required because the file calls libc. `std.testing.allocator` fails the test on a leak, a double free, or a free of memory it did not hand out. `std.testing.checkAllAllocationFailures` covers a function that allocates more than once. ReleaseFast is not the compliance build.
+Run these with Zig 0.17 as `zig` on `PATH`; they pass with 0.17.0 and 0.17.1. `bun test scripts/` fails when the installed std no longer matches `tools/std_lists.zig`. The Bun scripts run `ZIG` when it is set, else `zig` on `PATH`. There is no `build.zig`. `zig test` needs the file. `-lc` is required because the file calls libc. `std.testing.allocator` fails the test on a leak, a double free, or a free of memory it did not hand out. `std.testing.checkAllAllocationFailures` covers a function that allocates more than once. ReleaseFast is not the compliance build.
 
 `bun test scripts/` builds misra-lint into `.scratch/bin/` and checks it against the handbook: every do sample lints clean, and every don't sample marked compiles is flagged under its own rule or listed in `UNDECIDED` in `scripts/lint.test.ts` with what a syntax tree cannot see. `check_samples.ts` compiles every sample and compares the result with its mark.
 

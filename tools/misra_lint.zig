@@ -2246,6 +2246,15 @@ fn importsOf(arena: Allocator, source: [:0]const u8) Allocator.Error![]const []c
     return out.items;
 }
 
+/// True when `paths` names `target`, compared after `resolveAlloc`.
+fn listsPath(arena: Allocator, paths: []const []const u8, target: []const u8) Allocator.Error!bool {
+    const want = try std.Io.Dir.path.resolveAlloc(arena, &.{target});
+    for (paths) |path| {
+        if (std.mem.eql(u8, try std.Io.Dir.path.resolveAlloc(arena, &.{path}), want)) return true;
+    }
+    return false;
+}
+
 /// Adds an `unreachable_file` finding to every given file that `root` does not
 /// reach through `@import`. Paths are compared after `resolveAlloc`.
 // ponytail: a linear scan per import, O(files * imports). A hash map is the upgrade for very large file sets.
@@ -2361,6 +2370,12 @@ pub fn main(init: std.process.Init) !u8 {
         try ew.writeAll(usage);
         try ew.flush();
         return 2;
+    }
+
+    if (root_path) |root| {
+        // The walk starts from the root's own imports, so the root is read even when
+        // FILE... leaves it out.
+        if (!try listsPath(arena, paths.items, root)) try paths.append(arena, root);
     }
 
     const sources = try arena.alloc([:0]u8, paths.items.len);
